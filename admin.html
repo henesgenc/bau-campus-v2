@@ -1879,8 +1879,7 @@
         console.error(e);
         showStatus($('authStatus'), 'Giriş başarısız. E-posta/şifre veya Auth ayarlarını kontrol edin.', 'error');
       }
-    });
-
+    
     $('logoutBtn').addEventListener('click', () => signOut(auth));
 
     onAuthStateChanged(auth, async user => {
