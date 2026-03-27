@@ -721,7 +721,7 @@
           <div class="grid2">
             <div class="field">
               <label>Kat</label>
-              <input id="classroomFloor" type="text" placeholder="2.Kat" />
+              <select id="classroomFloor"><option value="">Kat Seçin</option></select>
             </div>
             <div class="field">
               <label>Tür</label>
@@ -875,6 +875,65 @@
       });
     }
 
+
+    function extractFeatureList(features) {
+      if (Array.isArray(features)) return features.filter(Boolean);
+      if (features && typeof features === 'object') {
+        if (Array.isArray(features.items)) return features.items.filter(Boolean);
+        if (typeof features.items === 'string') return features.items.split(',').map(x => x.trim()).filter(Boolean);
+      }
+      return [];
+    }
+
+    function getClassroomFloorValue(c) {
+      if (!c) return '';
+      const raw = c.floor ?? c?.features?.floor ?? c?.features?.kat ?? '';
+      return String(raw || '').trim();
+    }
+
+    function getFloorOptionsForBlock(blockId, extraValues=[]) {
+      const values = [];
+      const seen = new Set();
+      const push = v => {
+        const value = String(v || '').trim();
+        if (!value || seen.has(value)) return;
+        seen.add(value);
+        values.push(value);
+      };
+
+      const block = blocks.find(b => b.id === blockId);
+      if (block && Number.isFinite(Number(block.floorCount))) {
+        const count = Math.max(0, Number(block.floorCount));
+        for (let f = 0; f <= count; f++) {
+          push(f === 0 ? 'Zemin Kat' : `${f}.Kat`);
+        }
+      }
+
+      classrooms
+        .filter(c => c.blockId === blockId)
+        .map(c => getClassroomFloorValue(c))
+        .forEach(push);
+
+      extraValues.forEach(push);
+
+      return values.sort((a,b) => {
+        const na = a.toLowerCase().includes('zemin') ? 0 : parseInt(a,10);
+        const nb = b.toLowerCase().includes('zemin') ? 0 : parseInt(b,10);
+        if (!Number.isNaN(na) && !Number.isNaN(nb) && na !== nb) return na-nb;
+        return a.localeCompare(b, 'tr');
+      });
+    }
+
+    function fillClassroomFloorSelect(blockId, selectedValue='') {
+      const sel = $('classroomFloor');
+      const options = getFloorOptionsForBlock(blockId, selectedValue ? [selectedValue] : []);
+      sel.innerHTML = '<option value="">Kat Seçin</option>' + options.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+      if (selectedValue && !options.includes(selectedValue)) {
+        sel.innerHTML += `<option value="${escapeHtml(selectedValue)}">${escapeHtml(selectedValue)}</option>`;
+      }
+      sel.value = selectedValue || '';
+    }
+
     function resetModal() {
       editingId = null;
       currentImageObject = null;
@@ -924,6 +983,7 @@
       if (type === 'classroom') {
         fillCampusSelect('classroomCampusId');
         fillBlockSelect('classroomBlockId', data?.campusId || $('classroomCampusId').value);
+        fillClassroomFloorSelect(data?.blockId || $('classroomBlockId').value, getClassroomFloorValue(data));
         fillClassroomTypeSelect(data?.type || '');
         $('modalTitle').textContent = data ? 'Sınıf Düzenle' : 'Yeni Sınıf';
         $('classroomForm').classList.remove('hidden');
@@ -934,9 +994,9 @@
           $('classroomCampusId').value = data.campusId || '';
           fillBlockSelect('classroomBlockId', data.campusId);
           $('classroomBlockId').value = data.blockId || '';
-          $('classroomFloor').value = data.floor || '';
+          $('classroomFloor').value = getClassroomFloorValue(data);
           $('classroomType').value = data.type || '';
-          $('classroomFeatures').value = (data.features || []).join(', ');
+          $('classroomFeatures').value = extractFeatureList(data.features).join(', ');
            $('classroomActive').checked = data.active !== false;
           currentImages = Array.isArray(data.imageObjects) ? [...data.imageObjects] : Array.isArray(data.images) ? data.images.map(url => ({ url })) : [];
           // Mevcut thumbnail'in index'ini bul
@@ -967,7 +1027,11 @@
       $(selectId).innerHTML = filtered.map(b => `<option value="${b.id}">${escapeHtml(b.name || '')}</option>`).join('');
     }
 
-    $('classroomCampusId').addEventListener('change', () => fillBlockSelect('classroomBlockId', $('classroomCampusId').value));
+    $('classroomCampusId').addEventListener('change', () => {
+      fillBlockSelect('classroomBlockId', $('classroomCampusId').value);
+      fillClassroomFloorSelect($('classroomBlockId').value);
+    });
+    $('classroomBlockId').addEventListener('change', () => fillClassroomFloorSelect($('classroomBlockId').value, $('classroomFloor').value));
 
     $('campusImage').addEventListener('change', async e => {
       const file = e.target.files?.[0];
@@ -1002,7 +1066,12 @@
         .sort((a,b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999) || (a.name||'').localeCompare(b.name||'','tr'));
       blocks = blockSnap.docs.map(d => ({ id: d.id, ...d.data() }))
         .sort((a,b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999) || (a.name||'').localeCompare(b.name||'','tr'));
-      classrooms = classroomSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      classrooms = classroomSnap.docs.map(d => {
+        const data = { id: d.id, ...d.data() };
+        data.floor = getClassroomFloorValue(data);
+        data.featureList = extractFeatureList(data.features);
+        return data;
+      });
       classroomTypes = typeSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
       try {
@@ -1090,7 +1159,7 @@
         const q = $('classroomSearch').value.trim().toLowerCase();
         // Aktiflik filtresi: sadece aktif olanlar gösterilsin
         const filtered = classrooms.filter(c => {
-          const text = `${c.code || ''} ${c.blockName || ''} ${c.floor || ''} ${c.campusName || ''}`.toLowerCase();
+          const text = `${c.code || ''} ${c.blockName || ''} ${getClassroomFloorValue(c) || ''} ${c.campusName || ''}`.toLowerCase();
           return text.includes(q);
         });
 
@@ -1105,7 +1174,7 @@
               ${c.images?.[0] ? `<img class="thumb" src="${c.images[0]}" alt="">` : `<div class="thumb placeholder">🪑</div>`}
               <div class="item-body">
                 <h3 class="item-title">${escapeHtml(c.code || '')}${c.active === false ? ' <span style="font-size:13px;font-weight:700;background:#fee4e2;color:#b42318;padding:2px 8px;border-radius:6px;margin-left:6px">Pasif</span>' : ''}</h3>
-                <div class="item-meta">${escapeHtml(c.blockName || '-')} • ${escapeHtml(c.floor || '-')} • ${Number(c.capacity || 0)} kişi</div>
+                <div class="item-meta">${escapeHtml(c.blockName || '-')} • ${escapeHtml(getClassroomFloorValue(c) || '-')} • ${Number(c.capacity || 0)} kişi</div>
               </div>
             </div>
             <div class="item-actions">
@@ -1300,7 +1369,10 @@
           blockName: block?.name || '',
           floor: $('classroomFloor').value.trim(),
           type: $('classroomType').value.trim(),
-          features: $('classroomFeatures').value.split(',').map(x => x.trim()).filter(Boolean),
+          features: {
+            floor: $('classroomFloor').value.trim(),
+            items: $('classroomFeatures').value.split(',').map(x => x.trim()).filter(Boolean)
+          },
           images: uploaded.map(x => x.url),
           imageObjects: uploaded,
           thumbnailUrl,
@@ -1651,11 +1723,9 @@
       const block = blocks.find(b => b.id === bid);
       const floorSel = $('mapFloorSelect');
       floorSel.innerHTML = '<option value="">— Tüm Katlar —</option>';
-      if (block && block.floorCount) {
-        for (let f = 0; f <= block.floorCount; f++) {
-          floorSel.innerHTML += `<option value="${f}">${f === 0 ? 'Zemin Kat' : f + '. Kat'}</option>`;
-        }
-      }
+      getFloorOptionsForBlock(bid).forEach(floorValue => {
+        floorSel.innerHTML += `<option value="${escapeHtml(floorValue)}">${escapeHtml(floorValue)}</option>`;
+      });
     });
 
     $('mapFloorSelect').addEventListener('change', () => renderMapPanel());
@@ -1668,7 +1738,8 @@
       return classrooms.filter(c => {
         if (cid && c.campusId !== cid) return false;
         if (bid && c.blockId !== bid) return false;
-        if (floor !== '' && String(c.floor) !== floor && c.floor !== floor) return false;
+        const classroomFloor = getClassroomFloorValue(c);
+        if (floor !== '' && classroomFloor !== floor) return false;
         return true;
       });
     }
@@ -1740,7 +1811,7 @@
       $('mapSelectedInfo').innerHTML = `
         <div class="info-row"><span>Kod:</span><strong>${escapeHtml(c.code||c.id)}</strong></div>
         <div class="info-row"><span>Kapasite:</span><strong>${c.capacity||'—'}</strong></div>
-        <div class="info-row"><span>Kat:</span><strong>${escapeHtml(c.floor||'—')}</strong></div>
+        <div class="info-row"><span>Kat:</span><strong>${escapeHtml(getClassroomFloorValue(c)||'—')}</strong></div>
         <div class="info-row"><span>Konum:</span><strong>${Math.round(d.x)}, ${Math.round(d.y)}</strong></div>
       `;
       $('mapRoomW').value = Math.round(d.w);
