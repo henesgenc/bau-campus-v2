@@ -1871,15 +1871,34 @@
         }
       });
     });
-    // ──────────────────────────────────────────────────────────────
+    // ── AUTH ───────────────────────────────────────────────────────
+    $('loginBtn').addEventListener('click', async () => {
       clearStatus($('authStatus'));
+
+      const email = $('loginEmail').value.trim();
+      const password = $('loginPassword').value;
+
+      if (!email) {
+        showStatus($('authStatus'), 'Lütfen e-posta girin.', 'error');
+        return;
+      }
+
+      if (!password) {
+        showStatus($('authStatus'), 'Lütfen şifre girin.', 'error');
+        return;
+      }
+
       try {
-        await signInWithEmailAndPassword(auth, $('loginEmail').value.trim(), $('loginPassword').value);
+        await signInWithEmailAndPassword(auth, email, password);
       } catch (e) {
         console.error(e);
-        showStatus($('authStatus'), 'Giriş başarısız. E-posta/şifre veya Auth ayarlarını kontrol edin.', 'error');
+        const msg = e?.code === 'auth/invalid-email'
+          ? 'Geçerli bir e-posta adresi girin.'
+          : 'Giriş başarısız. E-posta/şifre veya Auth ayarlarını kontrol edin.';
+        showStatus($('authStatus'), msg, 'error');
       }
-    
+    });
+
     $('logoutBtn').addEventListener('click', () => signOut(auth));
 
     onAuthStateChanged(auth, async user => {
