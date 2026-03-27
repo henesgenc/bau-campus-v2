@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="./logo.png" />
+  <title>Bahçeşehir Üniversitesi Derslikleri - Yönetim Paneli</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#f0f2f7;
+      --surface:#fff;
+      --muted:#7a869a;
+      --text:#0f1923;
+      --border:#e2e6ed;
+      --primary:#1a56db;
+      --primary-soft:#e8effe;
+      --danger-soft:#fee4e2;
+      --danger:#b42318;
+      --success-soft:#dcfae6;
+      --success:#067647;
+      --shadow-sm:0 1px 3px rgba(15,25,35,.07),0 4px 12px rgba(15,25,35,.05);
+      --shadow-md:0 4px 16px rgba(15,25,35,.09),0 1px 3px rgba(15,25,35,.06);
+      --shadow-lg:0 12px 40px rgba(15,25,35,.13);
+      --radius:16px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+    .container{width:min(1220px,calc(100% - 40px));margin:0 auto}
+
+    /* ── TOPBAR ── */
+    .topbar{
+      background:rgba(255,255,255,.88);
+      backdrop-filter:blur(16px);
+      border-bottom:1px solid rgba(226,230,237,.8);
+      position:sticky;top:0;z-index:20;
+    }
+    .topbar-inner{height:68px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .brand-logo{width:38px;height:38px;object-fit:contain;display:block}
+    .brand-text h1{font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+    .brand-text p{font-size:12px;color:var(--muted);margin-top:1px}
+    .nav{display:flex;gap:8px;align-items:center}
+    .nav a{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:8px 14px;border-radius:10px;
+      color:var(--muted);text-decoration:none;font-size:13.5px;font-weight:600;
+      transition:background .15s,color .15s;
+    }
+    .nav a:hover{background:#f1f3f8;color:var(--text)}
+    .nav a.active{background:var(--primary-soft);color:var(--primary)}
+
+    /* ── PAGE HEADER + TABS ── */
+    .page-header{
+      background:#fff;
+      border-bottom:1px solid var(--border);
+      padding:24px 0 0;
+    }
+    .page-header h2{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:16px}
+    .tabs{
+      display:flex;gap:4px;flex-wrap:wrap;
+      background:#e8eaef;
+      border-radius:14px;
+      padding:4px;
+      width:fit-content;
+    }
+    .tab-btn{
+      padding:8px 16px;border:none;border-radius:10px;
+      background:transparent;color:var(--muted);
+      font-size:13.5px;font-weight:600;font-family:'DM Sans',sans-serif;
+      cursor:pointer;transition:background .15s,color .15s,box-shadow .15s;
+      white-space:nowrap;
+    }
+    .tab-btn.active{
+      background:#fff;color:var(--text);
+      box-shadow:0 1px 4px rgba(15,25,35,.1);
+    }
+
+    /* ── CONTENT AREA ── */
+    .content-area{padding:24px 0 64px}
+
+    /* ── TOOLBAR ── */
+    .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+    .toolbar-left{color:var(--muted);font-size:14px;font-weight:600}
+    .toolbar-left strong{color:var(--text);font-size:15px}
+    .toolbar-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .search{
+      height:42px;border:1px solid var(--border);border-radius:12px;
+      padding:0 14px;font-size:14px;font-family:'DM Sans',sans-serif;
+      background:#f7f8fb;outline:none;width:min(340px,100%);
+      transition:border-color .15s,box-shadow .15s;
+    }
+    .search:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(26,86,219,.1);background:#fff}
+
+    /* ── BUTTONS ── */
+    .btn{
+      border:none;border-radius:11px;padding:10px 16px;
+      font-size:13.5px;font-weight:700;font-family:'DM Sans',sans-serif;
+      cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+      white-space:nowrap;transition:opacity .15s,box-shadow .15s;
+    }
+    .btn:hover{opacity:.88}
+    .btn-primary{background:var(--primary);color:#fff;box-shadow:0 2px 8px rgba(26,86,219,.25)}
+    .btn-danger{background:var(--danger-soft);color:var(--danger)}
+    .btn-secondary{background:var(--primary-soft);color:var(--primary)}
+    .btn-ghost{background:#fff;border:1px solid var(--border);color:#344054}
+
+    /* ── PANELS ── */
+    .panel{display:none}.panel.active{display:block}
+    .list{display:grid;gap:10px}
+
+    /* ── LIST ITEM ── */
+    .item{
+      background:#fff;border:1px solid var(--border);
+      border-radius:var(--radius);box-shadow:var(--shadow-sm);
+      display:flex;align-items:center;justify-content:space-between;
+      gap:12px;overflow:hidden;
+      transition:box-shadow .15s,border-color .15s;
+    }
+    .item:hover{box-shadow:var(--shadow-md);border-color:#d0d7e3}
+    .item-left{display:flex;align-items:center;gap:0;min-width:0;flex:1}
+    .thumb{
+      width:100px;height:74px;background:#edf0f5;
+      object-fit:cover;display:block;flex:0 0 auto;
+    }
+    .thumb.placeholder{
+      display:grid;place-items:center;
+      color:#b0b9c8;font-size:24px;
+    }
+    .item-body{padding:14px 16px;min-width:0;flex:1}
+    .item-title{
+      font-size:15px;font-weight:700;letter-spacing:-.01em;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      margin-bottom:4px;
+    }
+    .item-meta{color:var(--muted);font-size:13px;line-height:1.5}
+    .item-actions{display:flex;gap:6px;padding:0 14px 0 0;flex-shrink:0}
+    .icon-btn{
+      width:34px;height:34px;border:1px solid var(--border);
+      border-radius:9px;background:#fff;cursor:pointer;font-size:15px;
+      display:grid;place-items:center;
+      transition:background .12s,border-color .12s;
+    }
+    .icon-btn:hover{background:#f5f7fb;border-color:#c5ccd8}
+    .icon-btn.delete:hover{background:var(--danger-soft);border-color:#fca5a5}
+
+    /* ── EMPTY / LOADING ── */
+    .empty{
+      padding:36px;text-align:center;background:#fff;
+      border:1px dashed var(--border);border-radius:var(--radius);
+      color:var(--muted);font-size:14px;
+    }
+
+    /* ── AUTH ── */
+    .auth-wrap{max-width:420px;margin:48px auto}
+
+    /* ── CARD ── */
+    .card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm)}
+    .card-header{padding:18px 22px;border-bottom:1px solid var(--border)}
+    .card-header h2{font-size:22px;font-weight:700;letter-spacing:-.01em}
+    .card-header p{margin-top:4px;color:var(--muted);font-size:13.5px}
+    .card-body{padding:20px 22px}
+
+    /* ── FORM ── */
+    .field{margin-bottom:16px}
+    label{display:block;margin-bottom:7px;font-size:12.5px;font-weight:700;color:#344054;letter-spacing:.01em;text-transform:uppercase}
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="password"],
+    select,
+    textarea,
+    input[type="file"]{
+      width:100%;border:1px solid var(--border);border-radius:11px;
+      background:#f7f8fb;padding:11px 13px;font-size:14px;
+      font-family:'DM Sans',sans-serif;outline:none;color:var(--text);
+      transition:border-color .15s,box-shadow .15s,background .15s;
+      appearance:none;
+    }
+    select{
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b0b9c8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:right 10px center;
+      padding-right:36px;
+    }
+    input:focus,select:focus,textarea:focus{
+      border-color:var(--primary);
+      box-shadow:0 0 0 3px rgba(26,86,219,.1);
+      background:#fff;
+    }
+    input[type="checkbox"]{width:auto;margin-right:7px;accent-color:var(--primary)}
+    textarea{min-height:90px;resize:vertical}
+    input[type="file"]{padding:9px 13px;color:var(--muted);cursor:pointer}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+    /* ── STATUS ── */
+    .status{padding:11px 14px;border-radius:11px;font-size:13.5px;font-weight:600;margin-bottom:14px;display:none}
+    .status.show{display:block}
+    .status.error{background:var(--danger-soft);color:var(--danger)}
+    .status.success{background:var(--success-soft);color:var(--success)}
+
+    /* ── MODAL ── */
+    .modal{
+      position:fixed;inset:0;background:rgba(10,15,25,.6);
+      display:none;align-items:center;justify-content:center;
+      padding:20px;z-index:50;backdrop-filter:blur(4px);
+    }
+    .modal.active{display:flex}
+    .modal-box{
+      width:min(720px,100%);max-height:90vh;overflow:auto;
+      background:#fff;border-radius:20px;
+      box-shadow:0 30px 80px rgba(0,0,0,.22);
+    }
+    .modal-header{
+      padding:18px 22px;border-bottom:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      position:sticky;top:0;background:#fff;z-index:1;
+    }
+    .modal-title{font-size:20px;font-weight:700;letter-spacing:-.01em}
+    .close{
+      width:36px;height:36px;border-radius:9px;
+      border:1px solid var(--border);background:#fff;
+      cursor:pointer;font-size:16px;display:grid;place-items:center;
+      transition:background .12s;
+    }
+    .close:hover{background:#f5f7fb}
+    .modal-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}
+
+    /* ── THUMBS (image preview) ── */
+    .hidden{display:none!important}
+    .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .thumbs .img-box{position:relative;cursor:grab}
+    .thumbs .img-box:active{cursor:grabbing}
+    .thumbs img{width:84px;height:64px;object-fit:cover;border-radius:9px;border:1px solid var(--border)}
+    .thumbs button{
+      position:absolute;top:-6px;right:-6px;
+      width:20px;height:20px;border:none;border-radius:999px;
+      background:var(--danger-soft);color:var(--danger);
+      font-weight:800;cursor:pointer;font-size:12px;
+      display:grid;place-items:center;
+    }
+
+    @media(max-width:860px){
+      .grid2{grid-template-columns:1fr}
+      .toolbar{flex-direction:column;align-items:stretch}
+      .toolbar-right{flex-direction:column;align-items:stretch}
+      .search{width:100%}
+      .item{align-items:flex-start}
+      .thumb{width:80px;height:64px}
+      .tabs{width:100%}
+      .tab-btn{flex:1;text-align:center}
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <div class="brand">
+        <img class="brand-logo" src="./logo.png" alt="Bahçeşehir Üniversitesi logosu" />
+        <div class="brand-text">
+          <h1 id="brandTitle">Bahçeşehir Üniversitesi Derslikleri</h1>
+          <p id="brandSubtitle">Derslik Görselleri</p>
+        </div>
+      </div>
+      <nav class="nav">
+        <a href="./index.html">Ana Sayfa</a>
+        <a href="./admin.html" class="active">Yönetim</a>
+        <button id="logoutBtn" class="btn btn-ghost hidden">Çıkış Yap</button>
+      </nav>
+    </div>
+  </header>
+
+  <div id="authView" class="auth-wrap hidden">
+    <div class="card">
+    <div class="card-header">
+      <h2>Yönetim Girişi</h2>
+      <p>Firebase Authentication ile giriş yapın.</p>
+    </div>
+    <div class="card-body">
+      <div id="authStatus" class="status"></div>
+      <div class="field">
+        <label>E-posta</label>
+        <input id="loginEmail" type="email" placeholder="admin@site.com" />
+      </div>
+      <div class="field">
+        <label>Şifre</label>
+        <input id="loginPassword" type="password" placeholder="Şifreniz" />
+      </div>
+      <button id="loginBtn" class="btn btn-primary" style="width:100%">Giriş Yap</button>
+    </div>
+    </div>
+  </div>
+
+  <div id="appView" class="hidden">
+    <div class="page-header">
+      <div class="container">
+        <h2>Yönetim Paneli</h2>
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="campuses">Kampüsler</button>
+          <button class="tab-btn" data-tab="blocks">Bloklar</button>
+          <button class="tab-btn" data-tab="classrooms">Sınıflar</button>
+          <button class="tab-btn" data-tab="types">Derslik Türleri</button>
+          <button class="tab-btn" data-tab="settings">Ayarlar</button>
+        </div>
+      </div>
+    </div>
+    <div class="content-area">
+    <div class="container">
+
+      <section id="campusesPanel" class="panel active">
+        <div class="toolbar">
+          <div class="toolbar-left"><strong><span id="campusCount">0</span></strong> kampüs</div>
+          <div class="toolbar-right">
+            <button id="newCampusBtn" class="btn btn-primary">＋ Yeni Kampüs</button>
+          </div>
+        </div>
+        <div id="campusList" class="list"></div>
+      </section>
+
+      <section id="blocksPanel" class="panel">
+        <div class="toolbar">
+          <div class="toolbar-left"><strong><span id="blockCount">0</span></strong> blok</div>
+          <div class="toolbar-right">
+            <button id="newBlockBtn" class="btn btn-primary">＋ Yeni Blok</button>
+          </div>
+        </div>
+        <div id="blockList" class="list"></div>
+      </section>
+
+      <section id="classroomsPanel" class="panel">
+        <div class="toolbar">
+          <div class="toolbar-left"><strong><span id="classroomCount">0</span></strong> sınıf</div>
+          <div style="flex:1;display:flex;justify-content:center;padding:0 16px">
+            <input id="classroomSearch" class="search" type="text" placeholder="Sınıf adı, blok veya kat ile ara..." style="width:min(420px,100%)" />
+          </div>
+          <div class="toolbar-right">
+            <button id="newClassroomBtn" class="btn btn-primary">＋ Yeni Sınıf</button>
+          </div>
+        </div>
+        <div id="classroomList" class="list"></div>
+      </section>
+
+      <section id="typesPanel" class="panel">
+        <div class="toolbar">
+          <div class="toolbar-left"><strong><span id="typeCount">0</span></strong> derslik türü</div>
+        </div>
+        <div class="card">
+          <div class="card-body">
+            <div class="field">
+              <label>Yeni Tür Ekle</label>
+              <div class="grid2">
+                <input id="newTypeName" type="text" placeholder="Örn: Amfi" />
+                <button id="addTypeBtn" class="btn btn-secondary" type="button">Tür Ekle</button>
+              </div>
+              <div id="typeStatus" class="status"></div>
+              <div id="typeList" class="list" style="margin-top:14px;"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="settingsPanel" class="panel">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-header">
+            <h2>Site Ayarları</h2>
+            <p>Başlık, alt başlık ve logo düzenleyin.</p>
+          </div>
+          <div class="card-body">
+            <div id="settingsStatus" class="status"></div>
+            <div class="grid2">
+              <div class="field">
+                <label>Site Başlığı</label>
+                <input id="settingTitle" type="text" placeholder="Bahçeşehir Üniversitesi Derslikleri" />
+              </div>
+              <div class="field">
+                <label>Alt Başlık</label>
+                <input id="settingSubtitle" type="text" placeholder="Derslik Görselleri" />
+              </div>
+            </div>
+            <div class="field">
+              <label>Logo / Kapak Görseli</label>
+              <input id="settingLogo" type="file" accept="image/*" />
+            </div>
+            <div id="settingLogoPreview" class="thumbs"></div>
+            <button id="saveSettingsBtn" class="btn btn-primary" style="margin-top:8px">Ayarları Kaydet</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>Toplu İşlemler</h2>
+            <p>Tüm sınıflara uygulanacak bakım ve optimizasyon araçları.</p>
+          </div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px;background:#f7f8fb;border:1px solid var(--border);border-radius:12px">
+              <div>
+                <div style="font-size:14px;font-weight:700;margin-bottom:2px">✔ Tümünü Aktif Et</div>
+                <div style="font-size:13px;color:var(--muted)">Pasif durumdaki tüm sınıfları bir anda aktif hale getirir.</div>
+              </div>
+              <button id="activateAllBtn" class="btn btn-secondary" style="flex-shrink:0">Çalıştır</button>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px;background:#f7f8fb;border:1px solid var(--border);border-radius:12px">
+              <div>
+                <div style="font-size:14px;font-weight:700;margin-bottom:2px">🖼 Thumbnail Oluştur</div>
+                <div style="font-size:13px;color:var(--muted)">Thumbnail'i olmayan sınıflar için küçük önizleme görseli oluşturur. Ana sayfa açılışını hızlandırır.</div>
+              </div>
+              <button id="bulkThumbBtn" class="btn btn-ghost" style="flex-shrink:0">Çalıştır</button>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      </div><!-- /container -->
+      </div><!-- /content-area -->
+  </div><!-- /appView -->
+
+  <div id="entityModal" class="modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modalTitle" class="modal-title">Yeni Kayıt</h3>
+        <button id="closeModal" class="close">✕</button>
+      </div>
+      <div class="card-body">
+        <div id="modalStatus" class="status"></div>
+
+        <div id="campusForm" class="hidden">
+          <div class="field">
+            <label>Kampüs Adı</label>
+            <input id="campusName" type="text" placeholder="İSTANBUL-BEŞİKTAŞ" />
+          </div>
+          <div class="field">
+            <label>Sıra No <span style="color:#98a2b3;font-weight:400">(küçük sayı önce gelir)</span></label>
+            <input id="campusSortOrder" type="number" min="0" placeholder="0" />
+          </div>
+          <div class="field">
+            <label>Kapak Görseli</label>
+            <input id="campusImage" type="file" accept="image/*" />
+          </div>
+          <div id="campusImagePreview" class="thumbs"></div>
+        </div>
+
+        <div id="blockForm" class="hidden">
+          <div class="grid2">
+            <div class="field">
+              <label>Blok Adı</label>
+              <input id="blockName" type="text" placeholder="B Blok (Beşiktaş)" />
+            </div>
+            <div class="field">
+              <label>Bağlı Kampüs</label>
+              <select id="blockCampusId"></select>
+            </div>
+          </div>
+          <div class="grid2">
+            <div class="field">
+              <label>Kat Sayısı</label>
+              <input id="blockFloorCount" type="number" min="0" placeholder="10" />
+            </div>
+            <div class="field">
+              <label>Sıra No <span style="color:#98a2b3;font-weight:400">(küçük sayı önce gelir)</span></label>
+              <input id="blockSortOrder" type="number" min="0" placeholder="0" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Kapak Görseli</label>
+            <input id="blockImage" type="file" accept="image/*" />
+          </div>
+          <div id="blockImagePreview" class="thumbs"></div>
+        </div>
+
+        <div id="classroomForm" class="hidden">
+          <div class="grid2">
+            <div class="field">
+              <label>Sınıf Kodu</label>
+              <input id="classroomCode" type="text" placeholder="B201" />
+            </div>
+            <div class="field">
+              <label>Kapasite</label>
+              <input id="classroomCapacity" type="number" min="0" placeholder="152" />
+            </div>
+          </div>
+          <div class="grid2">
+            <div class="field">
+              <label>Kampüs</label>
+              <select id="classroomCampusId"></select>
+            </div>
+            <div class="field">
+              <label>Blok</label>
+              <select id="classroomBlockId"></select>
+            </div>
+          </div>
+          <div class="grid2">
+            <div class="field">
+              <label>Kat</label>
+              <input id="classroomFloor" type="text" placeholder="2.Kat" />
+            </div>
+            <div class="field">
+              <label>Tür</label>
+              <select id="classroomType"></select>
+            </div>
+          </div>
+          <div class="field">
+            <label><input id="classroomActive" type="checkbox" checked /> Aktif mi?</label>
+          </div>
+          <div class="field">
+            <label>Özellikler</label>
+            <input id="classroomFeatures" type="text" placeholder="Projeksiyon, Klima, Akıllı Tahta" />
+          </div>
+          <div class="field">
+            <label>Görseller</label>
+            <input id="classroomImages" type="file" accept="image/*" multiple />
+          </div>
+          <div id="classroomImagePreview" class="thumbs"></div>
+        </div>
+
+        <div class="modal-actions">
+          <button id="saveEntityBtn" class="btn btn-primary">Kaydet</button>
+          <button id="deleteEntityBtn" class="btn btn-danger hidden">Sil</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toplu Thumbnail Progress Modal -->
+  <div id="bulkThumbModal" class="modal">
+    <div class="modal-box" style="max-width:480px">
+      <div class="modal-header">
+        <h3 class="modal-title">🖼 Thumbnail Oluşturuluyor</h3>
+      </div>
+      <div class="card-body" style="padding:24px">
+        <div id="bulkThumbStatus" style="margin-bottom:16px;font-size:14px;color:var(--muted);font-weight:600"></div>
+        <!-- progress bar -->
+        <div style="background:#e8eaef;border-radius:99px;height:10px;overflow:hidden;margin-bottom:18px">
+          <div id="bulkThumbBar" style="height:100%;width:0%;background:var(--primary);border-radius:99px;transition:width .3s ease"></div>
+        </div>
+        <!-- scrollable log -->
+        <div id="bulkThumbLog"
+          style="max-height:220px;overflow-y:auto;font-size:12.5px;line-height:1.8;
+                 background:#f7f8fb;border:1px solid var(--border);border-radius:11px;padding:12px;
+                 font-family:monospace;color:#344054"></div>
+        <div style="margin-top:18px;display:flex;justify-content:flex-end">
+          <button id="bulkThumbCloseBtn" class="btn btn-ghost hidden">Kapat</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db, auth, storage } from './firebase-config.js';
+    import {
+      collection, getDocs, getDoc, query, orderBy, addDoc, updateDoc, deleteDoc,
+      doc, serverTimestamp, setDoc, writeBatch
+    } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js';
+    import {
+      signInWithEmailAndPassword, onAuthStateChanged, signOut
+    } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js';
+    import {
+      ref, uploadBytes, getDownloadURL, deleteObject
+    } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-storage.js';
+
+    const $ = id => document.getElementById(id);
+
+    let campuses = [];
+    let blocks = [];
+    let classrooms = [];
+    let classroomTypes = [];
+    let settings = {};
+    let currentTab = 'campuses';
+    let modalType = null;
+    let editingId = null;
+    let currentImageObject = null;
+    let currentImages = [];
+    let currentThumbnailIndex = 0; // hangi görsel thumbnail olacak (index)
+
+    function showStatus(el, text, type='success') {
+      el.textContent = text;
+      el.className = `status show ${type}`;
+    }
+    function clearStatus(el) {
+      el.textContent = '';
+      el.className = 'status';
+    }
+    function escapeHtml(str='') {
+      return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+
+    function setActiveTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      $(tab + 'Panel').classList.add('active');
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => setActiveTab(btn.dataset.tab));
+    });
+
+    async function uploadFile(path, file) {
+      const storageRef = ref(storage, path);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      return { url, path };
+    }
+
+    async function deleteImageIfPossible(obj) {
+      if (obj && obj.path) {
+        try { await deleteObject(ref(storage, obj.path)); } catch(e) {}
+      }
+    }
+
+    function previewSingle(targetId, obj) {
+      const wrap = $(targetId);
+      wrap.innerHTML = obj ? `<div class="img-box"><img src="${obj.url}" alt=""></div>` : '';
+    }
+
+    function previewMultiple(targetId, list) {
+      const wrap = $(targetId);
+      wrap.innerHTML = list.map((img, i) => `
+        <div class="img-box" style="position:relative">
+          <img src="${img.url}" alt="" style="${i === currentThumbnailIndex ? 'border:2.5px solid var(--primary);border-radius:9px' : ''}">
+          <button type="button" data-i="${i}" class="thumb-del-btn">×</button>
+          <button type="button" data-ti="${i}" class="thumb-sel-btn" title="Thumbnail yap"
+            style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);
+              font-size:10px;font-weight:700;white-space:nowrap;padding:2px 6px;
+              border:none;border-radius:6px;cursor:pointer;
+              background:${i === currentThumbnailIndex ? 'var(--primary)' : '#e2e6ed'};
+              color:${i === currentThumbnailIndex ? '#fff' : '#5a6477'};">
+            ${i === currentThumbnailIndex ? '★ Thumbnail' : 'Thumbnail'}
+          </button>
+        </div>
+      `).join('');
+      wrap.querySelectorAll('.thumb-del-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = Number(btn.dataset.i);
+          currentImages.splice(idx, 1);
+          if (currentThumbnailIndex >= currentImages.length) currentThumbnailIndex = 0;
+          else if (currentThumbnailIndex > idx) currentThumbnailIndex--;
+          previewMultiple(targetId, currentImages);
+        });
+      });
+      wrap.querySelectorAll('.thumb-sel-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentThumbnailIndex = Number(btn.dataset.ti);
+          previewMultiple(targetId, currentImages);
+        });
+      });
+    }
+
+    function resetModal() {
+      editingId = null;
+      currentImageObject = null;
+      currentImages = [];
+      currentThumbnailIndex = 0;
+      clearStatus($('modalStatus'));
+      $('deleteEntityBtn').classList.add('hidden');
+      ['campusForm','blockForm','classroomForm'].forEach(id => $(id).classList.add('hidden'));
+      ['campusImagePreview','blockImagePreview','classroomImagePreview'].forEach(id => $(id).innerHTML = '');
+      ['campusName','campusSortOrder','blockName','blockFloorCount','blockSortOrder','classroomCode','classroomCapacity','classroomFloor','classroomType','classroomFeatures'].forEach(id => { if ($(id)) $(id).value = ''; });
+      ['campusImage','blockImage','classroomImages'].forEach(id => { if ($(id)) $(id).value = ''; });
+    }
+
+    function openModal(type, data=null) {
+      resetModal();
+      modalType = type;
+      $('entityModal').classList.add('active');
+      $('deleteEntityBtn').classList.toggle('hidden', !data);
+
+      if (type === 'campus') {
+        $('modalTitle').textContent = data ? 'Kampüs Düzenle' : 'Yeni Kampüs';
+        $('campusForm').classList.remove('hidden');
+        if (data) {
+          editingId = data.id;
+          $('campusName').value = data.name || '';
+          $('campusSortOrder').value = data.sortOrder ?? '';
+          currentImageObject = data.imageObject || (data.imageUrl ? { url: data.imageUrl } : null);
+          previewSingle('campusImagePreview', currentImageObject);
+        }
+      }
+
+      if (type === 'block') {
+        fillCampusSelect('blockCampusId');
+        $('modalTitle').textContent = data ? 'Blok Düzenle' : 'Yeni Blok';
+        $('blockForm').classList.remove('hidden');
+        if (data) {
+          editingId = data.id;
+          $('blockName').value = data.name || '';
+          $('blockCampusId').value = data.campusId || '';
+          $('blockFloorCount').value = data.floorCount || 0;
+          $('blockSortOrder').value = data.sortOrder ?? '';
+          currentImageObject = data.imageObject || (data.imageUrl ? { url: data.imageUrl } : null);
+          previewSingle('blockImagePreview', currentImageObject);
+        }
+      }
+
+      if (type === 'classroom') {
+        fillCampusSelect('classroomCampusId');
+        fillBlockSelect('classroomBlockId', data?.campusId || $('classroomCampusId').value);
+        fillClassroomTypeSelect(data?.type || '');
+        $('modalTitle').textContent = data ? 'Sınıf Düzenle' : 'Yeni Sınıf';
+        $('classroomForm').classList.remove('hidden');
+        if (data) {
+          editingId = data.id;
+          $('classroomCode').value = data.code || '';
+          $('classroomCapacity').value = data.capacity || 0;
+          $('classroomCampusId').value = data.campusId || '';
+          fillBlockSelect('classroomBlockId', data.campusId);
+          $('classroomBlockId').value = data.blockId || '';
+          $('classroomFloor').value = data.floor || '';
+          $('classroomType').value = data.type || '';
+          $('classroomFeatures').value = (data.features || []).join(', ');
+           $('classroomActive').checked = data.active !== false;
+          currentImages = Array.isArray(data.imageObjects) ? [...data.imageObjects] : Array.isArray(data.images) ? data.images.map(url => ({ url })) : [];
+          // Mevcut thumbnail'in index'ini bul
+          if (data.thumbnailPath) {
+            const ti = currentImages.findIndex(img => img.path === data.thumbnailPath);
+            currentThumbnailIndex = ti >= 0 ? ti : 0;
+          } else {
+            currentThumbnailIndex = 0;
+          }
+          previewMultiple('classroomImagePreview', currentImages);
+        }
+      }
+    }
+
+    function closeModal() {
+      $('entityModal').classList.remove('active');
+    }
+
+    $('closeModal').addEventListener('click', closeModal);
+    $('entityModal').addEventListener('click', e => { if (e.target === $('entityModal')) closeModal(); });
+
+    function fillCampusSelect(selectId) {
+      $(selectId).innerHTML = campuses.map(c => `<option value="${c.id}">${escapeHtml(c.name || '')}</option>`).join('');
+    }
+
+    function fillBlockSelect(selectId, campusId) {
+      const filtered = blocks.filter(b => !campusId || b.campusId === campusId);
+      $(selectId).innerHTML = filtered.map(b => `<option value="${b.id}">${escapeHtml(b.name || '')}</option>`).join('');
+    }
+
+    $('classroomCampusId').addEventListener('change', () => fillBlockSelect('classroomBlockId', $('classroomCampusId').value));
+
+    $('campusImage').addEventListener('change', async e => {
+      const file = e.target.files?.[0];
+      if (file) {
+        currentImageObject = { url: URL.createObjectURL(file), file };
+        previewSingle('campusImagePreview', currentImageObject);
+      }
+    });
+
+    $('blockImage').addEventListener('change', async e => {
+      const file = e.target.files?.[0];
+      if (file) {
+        currentImageObject = { url: URL.createObjectURL(file), file };
+        previewSingle('blockImagePreview', currentImageObject);
+      }
+    });
+
+    $('classroomImages').addEventListener('change', e => {
+      const files = Array.from(e.target.files || []);
+      for (const file of files) currentImages.push({ url: URL.createObjectURL(file), file });
+      previewMultiple('classroomImagePreview', currentImages);
+    });
+
+    async function loadAll() {
+      const [campusSnap, blockSnap, classroomSnap, typeSnap] = await Promise.all([
+        getDocs(query(collection(db, 'campuses'), orderBy('name'))),
+        getDocs(query(collection(db, 'blocks'), orderBy('name'))),
+        getDocs(query(collection(db, 'classrooms'), orderBy('code'))),
+        getDocs(query(collection(db, 'classroomTypes'), orderBy('name')))
+      ]);
+      campuses = campusSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a,b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999) || (a.name||'').localeCompare(b.name||'','tr'));
+      blocks = blockSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a,b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999) || (a.name||'').localeCompare(b.name||'','tr'));
+      classrooms = classroomSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      classroomTypes = typeSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      try {
+        const setSnap = await getDoc(doc(db, 'settings', 'site'));
+        settings = setSnap.exists() ? setSnap.data() : {};
+      } catch (e) { settings = {}; }
+
+      renderCounts();
+      renderCampuses();
+      renderBlocks();
+      renderClassrooms();
+      renderTypeList();
+      fillSettings();
+      fillClassroomTypeSelect();
+      $('brandTitle').textContent = settings.title || 'Bahçeşehir Üniversitesi Derslikleri';
+      $('brandSubtitle').textContent = settings.subtitle || 'Derslik Görselleri';
+    }
+
+    function renderCounts() {
+      $('campusCount').textContent = campuses.length;
+      $('blockCount').textContent = blocks.length;
+      $('classroomCount').textContent = classrooms.filter(c => c.active !== false).length;
+      $('typeCount').textContent = classroomTypes.length;
+    }
+
+    function campusBlockCount(campusId) {
+      return blocks.filter(b => b.campusId === campusId).length;
+    }
+
+    function blockClassCount(blockId) {
+      return classrooms.filter(c => c.blockId === blockId).length;
+    }
+
+    function renderCampuses() {
+      const list = $('campusList');
+      if (!campuses.length) {
+        list.innerHTML = `<div class="empty">Henüz kampüs eklenmemiş.</div>`;
+        return;
+      }
+      list.innerHTML = campuses.map(c => `
+        <article class="item">
+          <div class="item-left">
+            ${c.imageUrl ? `<img class="thumb" src="${c.imageUrl}" alt="">` : `<div class="thumb placeholder">🏫</div>`}
+            <div class="item-body">
+              <h3 class="item-title">${escapeHtml(c.name || '')}</h3>
+              <div class="item-meta">${campusBlockCount(c.id)} blok</div>
+            </div>
+          </div>
+          <div class="item-actions">
+            <button class="icon-btn edit" data-type="campus" data-id="${c.id}">✎</button>
+            <button class="icon-btn delete" data-del-type="campus" data-id="${c.id}">🗑</button>
+          </div>
+        </article>
+      `).join('');
+      wireListActions();
+    }
+
+    function renderBlocks() {
+      const list = $('blockList');
+      if (!blocks.length) {
+        list.innerHTML = `<div class="empty">Henüz blok eklenmemiş.</div>`;
+        return;
+      }
+      list.innerHTML = blocks.map(b => `
+        <article class="item">
+          <div class="item-left">
+            ${b.imageUrl ? `<img class="thumb" src="${b.imageUrl}" alt="">` : `<div class="thumb placeholder">🏢</div>`}
+            <div class="item-body">
+              <h3 class="item-title">${escapeHtml(b.name || '')}</h3>
+              <div class="item-meta">${escapeHtml(b.campusName || '-')} • ${blockClassCount(b.id)} sınıf • ${Number(b.floorCount || 0)} kat</div>
+            </div>
+          </div>
+          <div class="item-actions">
+            <button class="icon-btn edit" data-type="block" data-id="${b.id}">✎</button>
+            <button class="icon-btn delete" data-del-type="block" data-id="${b.id}">🗑</button>
+          </div>
+        </article>
+      `).join('');
+      wireListActions();
+    }
+
+    function renderClassrooms() {
+        const q = $('classroomSearch').value.trim().toLowerCase();
+        // Aktiflik filtresi: sadece aktif olanlar gösterilsin
+        const filtered = classrooms.filter(c => {
+          const text = `${c.code || ''} ${c.blockName || ''} ${c.floor || ''} ${c.campusName || ''}`.toLowerCase();
+          return text.includes(q);
+        });
+
+        const list = $('classroomList');
+        if (!filtered.length) {
+          list.innerHTML = `<div class="empty">Kayıt bulunamadı.</div>`;
+          return;
+        }
+        list.innerHTML = filtered.map(c => `
+          <article class="item" style="${c.active === false ? 'opacity:0.7;border-left:4px solid #f04438' : ''}">
+            <div class="item-left">
+              ${c.images?.[0] ? `<img class="thumb" src="${c.images[0]}" alt="">` : `<div class="thumb placeholder">🪑</div>`}
+              <div class="item-body">
+                <h3 class="item-title">${escapeHtml(c.code || '')}${c.active === false ? ' <span style="font-size:13px;font-weight:700;background:#fee4e2;color:#b42318;padding:2px 8px;border-radius:6px;margin-left:6px">Pasif</span>' : ''}</h3>
+                <div class="item-meta">${escapeHtml(c.blockName || '-')} • ${escapeHtml(c.floor || '-')} • ${Number(c.capacity || 0)} kişi</div>
+              </div>
+            </div>
+            <div class="item-actions">
+              <button class="icon-btn edit" data-type="classroom" data-id="${c.id}">✎</button>
+              <button class="icon-btn delete" data-del-type="classroom" data-id="${c.id}">🗑</button>
+            </div>
+          </article>
+        `).join('');
+        wireListActions();
+      }
+
+    function wireListActions() {
+      document.querySelectorAll('[data-type]').forEach(btn => {
+        btn.onclick = () => {
+          const type = btn.dataset.type;
+          const id = btn.dataset.id;
+          if (type === 'campus') openModal('campus', campuses.find(x => x.id === id));
+          if (type === 'block') openModal('block', blocks.find(x => x.id === id));
+          if (type === 'classroom') openModal('classroom', classrooms.find(x => x.id === id));
+        };
+      });
+      document.querySelectorAll('[data-del-type]').forEach(btn => {
+        btn.onclick = () => handleDelete(btn.dataset.delType, btn.dataset.id);
+      });
+    }
+
+    async function handleDelete(type, id) {
+      if (type === 'campus') {
+        if (blocks.some(b => b.campusId === id)) { alert('Önce bu kampüse bağlı blokları silin.'); return; }
+        const item = campuses.find(x => x.id === id);
+        if (!confirm('Kampüs silinsin mi?')) return;
+        await deleteImageIfPossible(item.imageObject);
+        await deleteDoc(doc(db, 'campuses', id));
+      }
+      if (type === 'block') {
+        if (classrooms.some(c => c.blockId === id)) { alert('Önce bu bloğa bağlı sınıfları silin.'); return; }
+        const item = blocks.find(x => x.id === id);
+        if (!confirm('Blok silinsin mi?')) return;
+        await deleteImageIfPossible(item.imageObject);
+        await deleteDoc(doc(db, 'blocks', id));
+      }
+      if (type === 'classroom') {
+        const item = classrooms.find(x => x.id === id);
+        if (!confirm('Sınıf silinsin mi?')) return;
+        for (const img of (item.imageObjects || [])) await deleteImageIfPossible(img);
+        await deleteDoc(doc(db, 'classrooms', id));
+      }
+      await loadAll();
+    }
+
+    async function saveCampus() {
+      const name = $('campusName').value.trim();
+      if (!name) return showStatus($('modalStatus'), 'Kampüs adı zorunlu.', 'error');
+
+      let imageObject = currentImageObject && !currentImageObject.file ? currentImageObject : null;
+      if (currentImageObject?.file) {
+        imageObject = await uploadFile(`campuses/${Date.now()}-${currentImageObject.file.name}`, currentImageObject.file);
+      }
+
+      const payload = {
+        name,
+        sortOrder: $('campusSortOrder').value !== '' ? Number($('campusSortOrder').value) : null,
+        imageUrl: imageObject?.url || '', imageObject, updatedAt: serverTimestamp()
+      };
+      if (editingId) {
+        const old = campuses.find(x => x.id === editingId);
+        if (currentImageObject?.file && old?.imageObject?.path) await deleteImageIfPossible(old.imageObject);
+        await updateDoc(doc(db, 'campuses', editingId), payload);
+      } else {
+        payload.createdAt = serverTimestamp();
+        await addDoc(collection(db, 'campuses'), payload);
+      }
+    }
+
+    async function saveBlock() {
+      const name = $('blockName').value.trim();
+      const campusId = $('blockCampusId').value;
+      const campus = campuses.find(c => c.id === campusId);
+      if (!name || !campusId) return showStatus($('modalStatus'), 'Blok adı ve kampüs zorunlu.', 'error');
+
+      let imageObject = currentImageObject && !currentImageObject.file ? currentImageObject : null;
+      if (currentImageObject?.file) {
+        imageObject = await uploadFile(`blocks/${Date.now()}-${currentImageObject.file.name}`, currentImageObject.file);
+      }
+
+      const payload = {
+        name,
+        campusId,
+        campusName: campus?.name || '',
+        floorCount: Number($('blockFloorCount').value || 0),
+        sortOrder: $('blockSortOrder').value !== '' ? Number($('blockSortOrder').value) : null,
+        imageUrl: imageObject?.url || '',
+        imageObject,
+        updatedAt: serverTimestamp()
+      };
+
+      if (editingId) {
+        const old = blocks.find(x => x.id === editingId);
+        if (currentImageObject?.file && old?.imageObject?.path) await deleteImageIfPossible(old.imageObject);
+        await updateDoc(doc(db, 'blocks', editingId), payload);
+      } else {
+        payload.createdAt = serverTimestamp();
+        await addDoc(collection(db, 'blocks'), payload);
+      }
+    }
+
+    // Seçili görseli 400×300 JPEG thumbnail'e dönüştürür
+    async function generateThumbnail(imageSource) {
+      // Firebase Storage görselleri doğrudan img.src ile canvas'a çizilince
+      // CORS nedeniyle canvas "tainted" oluyor ve toBlob engelleniyor.
+      // Çözüm: görseli önce fetch ile blob olarak çek, yerel object URL kullan.
+      let objectUrl = null;
+      try {
+        const response = await fetch(imageSource);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        objectUrl = URL.createObjectURL(blob);
+      } catch (fetchErr) {
+        // fetch başarısız olursa crossOrigin ile dene (fallback)
+        objectUrl = null;
+      }
+
+      const img = new Image();
+      if (!objectUrl) img.crossOrigin = 'anonymous';
+
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = objectUrl || imageSource;
+      });
+
+      const TW = 400, TH = 300;
+      const scale = Math.max(TW / img.naturalWidth, TH / img.naturalHeight);
+      const sw = TW / scale, sh = TH / scale;
+      const sx = (img.naturalWidth  - sw) / 2;
+      const sy = (img.naturalHeight - sh) / 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = TW; canvas.height = TH;
+      canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, TW, TH);
+      const result = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.82));
+
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      return result;
+    }
+
+    async function saveClassroom() {
+      const code = $('classroomCode').value.trim();
+      const campusId = $('classroomCampusId').value;
+      const blockId = $('classroomBlockId').value;
+      const campus = campuses.find(c => c.id === campusId);
+      const block = blocks.find(b => b.id === blockId);
+      if (!code || !campusId || !blockId) return showStatus($('modalStatus'), 'Sınıf kodu, kampüs ve blok zorunlu.', 'error');
+
+      const saveBtn = $('saveEntityBtn');
+      const oldText = saveBtn.textContent;
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Kaydediliyor...';
+      showStatus($('modalStatus'), 'Kaydediliyor, lütfen bekleyin...');
+
+      try {
+        const uploaded = [];
+        for (const img of currentImages) {
+          if (img.file) {
+            uploaded.push(await uploadFile(`classrooms/${code}/${Date.now()}-${img.file.name}`, img.file));
+          } else {
+            uploaded.push(img);
+          }
+        }
+
+        // Thumbnail oluştur ve yükle
+        let thumbnailUrl = null, thumbnailPath = null;
+        const thumbSource = uploaded[currentThumbnailIndex] || uploaded[0];
+        if (thumbSource) {
+          showStatus($('modalStatus'), 'Thumbnail oluşturuluyor...');
+          try {
+            const thumbBlob = await generateThumbnail(thumbSource.url);
+            const thumbPath = `classrooms/${code}/thumb_${Date.now()}.jpg`;
+            const thumbObj  = await uploadFile(thumbPath, thumbBlob);
+            thumbnailUrl  = thumbObj.url;
+            thumbnailPath = thumbObj.path;
+          } catch (thumbErr) {
+            console.warn('Thumbnail oluşturulamadı, devam ediliyor:', thumbErr);
+          }
+        }
+
+        const payload = {
+          code,
+          capacity: Number($('classroomCapacity').value || 0),
+          campusId,
+          campusName: campus?.name || '',
+          blockId,
+          blockName: block?.name || '',
+          floor: $('classroomFloor').value.trim(),
+          type: $('classroomType').value.trim(),
+          features: $('classroomFeatures').value.split(',').map(x => x.trim()).filter(Boolean),
+          images: uploaded.map(x => x.url),
+          imageObjects: uploaded,
+          thumbnailUrl,
+          thumbnailPath,
+          active: $('classroomActive').checked,
+          updatedAt: serverTimestamp()
+        };
+
+        if (editingId) {
+          const old = classrooms.find(x => x.id === editingId);
+          const keptPaths = new Set(uploaded.map(x => x.path).filter(Boolean));
+          for (const img of (old.imageObjects || [])) {
+            if (img.path && !keptPaths.has(img.path)) await deleteImageIfPossible(img);
+          }
+          // Eski thumbnail'i sil (yeni biri oluşturuldu)
+          if (old?.thumbnailPath) await deleteImageIfPossible({ path: old.thumbnailPath });
+          // Derslik güncellendi — branded önbellek görseli artık geçersiz, sil
+          if (old?.brandedImagePath) await deleteImageIfPossible({ path: old.brandedImagePath });
+          payload.brandedImageUrl = null;
+          payload.brandedImagePath = null;
+          await updateDoc(doc(db, 'classrooms', editingId), payload);
+        } else {
+          payload.createdAt = serverTimestamp();
+          await addDoc(collection(db, 'classrooms'), payload);
+        }
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = oldText;
+      }
+    }
+
+    async function saveSettings() {
+      clearStatus($('settingsStatus'));
+      const title = $('settingTitle').value.trim();
+      const subtitle = $('settingSubtitle').value.trim();
+      let logoObject = settings.logoObject || null;
+      const file = $('settingLogo').files?.[0];
+      if (file) {
+        if (logoObject?.path) await deleteImageIfPossible(logoObject);
+        logoObject = await uploadFile(`settings/${Date.now()}-${file.name}`, file);
+      }
+      await setDoc(doc(db, 'settings', 'site'), {
+        title, subtitle,
+        logoUrl: logoObject?.url || '',
+        logoObject: logoObject || null,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      showStatus($('settingsStatus'), 'Ayarlar kaydedildi.');
+      await loadAll();
+    }
+
+
+    function fillClassroomTypeSelect(selectedValue = '') {
+      const select = $('classroomType');
+      const options = classroomTypes.length
+        ? classroomTypes.map(t => `<option value="${escapeHtml(t.name || '')}">${escapeHtml(t.name || '')}</option>`).join('')
+        : '';
+      select.innerHTML = `<option value="">Tür seçin</option>${options}`;
+      if (selectedValue) select.value = selectedValue;
+    }
+
+    function renderTypeList() {
+      const list = $('typeList');
+      if (!list) return;
+      if (!classroomTypes.length) {
+        list.innerHTML = '<div class="empty">Henüz derslik türü eklenmemiş.</div>';
+        return;
+      }
+      list.innerHTML = classroomTypes.map(t => `
+        <article class="item" style="min-height:auto">
+          <div class="item-left">
+            <div class="item-body" style="padding:16px 0">
+              <h3 class="item-title" style="font-size:16px;margin:0;margin-left: 14px;">${escapeHtml(t.name || '')}</h3>
+            </div>
+          </div>
+          <div class="item-actions">
+            <button class="icon-btn delete" data-type-id="${t.id}" title="Sil">🗑</button>
+          </div>
+        </article>
+      `).join('');
+
+      list.querySelectorAll('[data-type-id]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.typeId;
+          const item = classroomTypes.find(x => x.id === id);
+          if (!item) return;
+          const used = classrooms.some(c => (c.type || '') === (item.name || ''));
+          if (used) {
+            showStatus($('typeStatus'), 'Bu tür kullanıldığı için silinemez.', 'error');
+            return;
+          }
+          if (!confirm('Derslik türü silinsin mi?')) return;
+          await deleteDoc(doc(db, 'classroomTypes', id));
+          await loadAll();
+          showStatus($('typeStatus'), 'Derslik türü silindi.');
+        });
+      });
+    }
+
+    function fillSettings() {
+      $('settingTitle').value = settings.title || 'Bahçeşehir Üniversitesi Derslikleri';
+      $('settingSubtitle').value = settings.subtitle || 'Derslik Görselleri';
+      $('settingLogoPreview').innerHTML = settings.logoUrl ? `<div class="img-box"><img src="${settings.logoUrl}" alt=""></div>` : '';
+    }
+
+    $('saveSettingsBtn').addEventListener('click', saveSettings);
+    $('classroomSearch').addEventListener('input', renderClassrooms);
+
+    $('activateAllBtn').addEventListener('click', async () => {
+      if (!confirm('Tüm sınıflar aktif hale getirilsin mi?')) return;
+      const btn = $('activateAllBtn');
+      const oldText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'İşleniyor...';
+      try {
+        const inactiveClassrooms = classrooms.filter(c => c.active !== true);
+        if (!inactiveClassrooms.length) {
+          alert('Zaten tüm sınıflar aktif durumda.');
+          return;
+        }
+        // Firestore batch max 500 işlem — gerekirse böl
+        const chunkSize = 500;
+        for (let i = 0; i < inactiveClassrooms.length; i += chunkSize) {
+          const batch = writeBatch(db);
+          inactiveClassrooms.slice(i, i + chunkSize).forEach(c => {
+            batch.update(doc(db, 'classrooms', c.id), { active: true });
+          });
+          await batch.commit();
+        }
+        await loadAll();
+        alert(`${inactiveClassrooms.length} sınıf aktif hale getirildi.`);
+      } catch (e) {
+        console.error(e);
+        alert('İşlem sırasında hata oluştu: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = oldText;
+      }
+    });
+
+    $('bulkThumbBtn').addEventListener('click', async () => {
+      const pending = classrooms.filter(c =>
+        !c.thumbnailUrl && Array.isArray(c.images) && c.images.length > 0
+      );
+      if (!pending.length) {
+        alert('Tüm derslikler zaten thumbnail\'e sahip veya görseli yok.');
+        return;
+      }
+      if (!confirm(`Thumbnail\'i olmayan ${pending.length} derslik için thumbnail oluşturulsun mu? Bu işlem biraz sürebilir.`)) return;
+
+      // Modal aç, sıfırla
+      const modal   = $('bulkThumbModal');
+      const bar     = $('bulkThumbBar');
+      const status  = $('bulkThumbStatus');
+      const log     = $('bulkThumbLog');
+      const closeBtn = $('bulkThumbCloseBtn');
+      bar.style.width = '0%';
+      log.innerHTML = '';
+      closeBtn.classList.add('hidden');
+      modal.classList.add('active');
+
+      const addLog = (msg, color = '#344054') => {
+        const line = document.createElement('div');
+        line.style.color = color;
+        line.textContent = msg;
+        log.appendChild(line);
+        log.scrollTop = log.scrollHeight;
+      };
+
+      let done = 0, succeeded = 0, failed = 0;
+
+      for (const classroom of pending) {
+        status.textContent = `İşleniyor: ${classroom.code || classroom.id} (${done + 1} / ${pending.length})`;
+        try {
+          // İlk görselden blob al
+          const imgUrl = classroom.images[0];
+          const thumbBlob = await generateThumbnail(imgUrl);
+          const thumbPath = `classrooms/${classroom.code || classroom.id}/thumb_${Date.now()}.jpg`;
+          const thumbObj  = await uploadFile(thumbPath, thumbBlob);
+
+          await updateDoc(doc(db, 'classrooms', classroom.id), {
+            thumbnailUrl:  thumbObj.url,
+            thumbnailPath: thumbObj.path
+          });
+
+          // Lokal state'i güncelle
+          const local = classrooms.find(c => c.id === classroom.id);
+          if (local) { local.thumbnailUrl = thumbObj.url; local.thumbnailPath = thumbObj.path; }
+
+          succeeded++;
+          addLog(`✓ ${classroom.code || classroom.id}`, 'var(--success)');
+        } catch (e) {
+          failed++;
+          addLog(`✗ ${classroom.code || classroom.id} — ${e.message}`, 'var(--danger)');
+          console.error(classroom.code, e);
+        }
+        done++;
+        bar.style.width = `${Math.round((done / pending.length) * 100)}%`;
+      }
+
+      status.textContent = `Tamamlandı — ${succeeded} başarılı, ${failed} hatalı`;
+      addLog(`─────────────────────────────`, '#b0b9c8');
+      addLog(`Toplam: ${pending.length}  ✓ ${succeeded}  ✗ ${failed}`,
+             failed > 0 ? 'var(--danger)' : 'var(--success)');
+      closeBtn.classList.remove('hidden');
+    });
+
+    $('bulkThumbCloseBtn').addEventListener('click', () => {
+      $('bulkThumbModal').classList.remove('active');
+    });
+
+    $('addTypeBtn').addEventListener('click', async () => {
+      clearStatus($('typeStatus'));
+      const name = $('newTypeName').value.trim();
+      if (!name) return showStatus($('typeStatus'), 'Tür adı girin.', 'error');
+      const exists = classroomTypes.some(t => (t.name || '').toLowerCase() === name.toLowerCase());
+      if (exists) return showStatus($('typeStatus'), 'Bu tür zaten mevcut.', 'error');
+
+      const btn = $('addTypeBtn');
+      const oldText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Ekleniyor...';
+
+      try {
+        await addDoc(collection(db, 'classroomTypes'), {
+          name,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+        $('newTypeName').value = '';
+        await loadAll();
+        showStatus($('typeStatus'), 'Derslik türü eklendi.');
+      } catch (e) {
+        console.error(e);
+        showStatus($('typeStatus'), 'Tür eklenemedi.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = oldText;
+      }
+    });
+
+    $('newCampusBtn').addEventListener('click', () => openModal('campus'));
+    $('newBlockBtn').addEventListener('click', () => openModal('block'));
+    $('newClassroomBtn').addEventListener('click', () => openModal('classroom'));
+
+    $('saveEntityBtn').addEventListener('click', async () => {
+      clearStatus($('modalStatus'));
+      const btn = $('saveEntityBtn');
+      const oldText = btn.textContent;
+
+      try {
+        if (modalType === 'campus' || modalType === 'block') {
+          btn.disabled = true;
+          btn.textContent = 'Kaydediliyor...';
+          showStatus($('modalStatus'), 'Kaydediliyor, lütfen bekleyin...');
+        }
+
+        if (modalType === 'campus') await saveCampus();
+        if (modalType === 'block') await saveBlock();
+        if (modalType === 'classroom') await saveClassroom();
+
+        closeModal();
+        await loadAll();
+      } catch (e) {
+        console.error(e);
+        showStatus($('modalStatus'), 'Kayıt sırasında hata oluştu. Firebase yapılandırmasını ve kuralları kontrol edin.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = oldText;
+      }
+    });
+
+    $('deleteEntityBtn').addEventListener('click', async () => {
+      if (!editingId || !modalType) return;
+      await handleDelete(modalType, editingId);
+      closeModal();
+    });
+
+    $('loginBtn').addEventListener('click', async () => {
+      clearStatus($('authStatus'));
+      try {
+        await signInWithEmailAndPassword(auth, $('loginEmail').value.trim(), $('loginPassword').value);
+      } catch (e) {
+        console.error(e);
+        showStatus($('authStatus'), 'Giriş başarısız. E-posta/şifre veya Auth ayarlarını kontrol edin.', 'error');
+      }
+    });
+
+    $('logoutBtn').addEventListener('click', () => signOut(auth));
+
+    onAuthStateChanged(auth, async user => {
+      if (user) {
+        $('authView').classList.add('hidden');
+        $('appView').classList.remove('hidden');
+        $('logoutBtn').classList.remove('hidden');
+        await loadAll();
+      } else {
+        $('authView').classList.remove('hidden');
+        $('appView').classList.add('hidden');
+        $('logoutBtn').classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

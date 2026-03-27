@@ -1,0 +1,3 @@
+Repo kök dizinine şu dosyaları ekleyin:
+- logo.png  -> site logosu ve favicon
+- logo_gorsel.png -> indirilen görselin sol üstünde kullanılacak logo

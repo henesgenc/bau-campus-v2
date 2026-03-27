@@ -1,0 +1,5 @@
+Güncelleme:
+- Derslik türü artık seçilebilir alan oldu.
+- Ayarlar bölümüne 'Derslik Türleri' yönetimi eklendi.
+- Yeni tür ekleme ve silme yapılabiliyor.
+- Kaydetme sırasında buton loading durumuna geçiyor ve 'Kaydediliyor...' mesajı gösteriliyor.

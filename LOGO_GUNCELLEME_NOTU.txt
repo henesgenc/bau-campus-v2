@@ -1,0 +1,4 @@
+Güncelleme:
+- İndirilen görselde logo arka plan kutusu kaldırıldı.
+- logo_gorsel.png yeni oranına (1729x414) uygun yerleştirme yapıldı.
+- Logoya hafif gölge eklendi.

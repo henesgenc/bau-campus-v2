@@ -1,0 +1,5 @@
+Yönetim panelinde yapılan güncellemeler:
+- logo.png site logosu olarak uygulandı.
+- favicon logo.png olarak ayarlandı.
+- Başlık: Bahçeşehir Üniversitesi Derslikleri
+- Alt başlık: Derslik Görselleri

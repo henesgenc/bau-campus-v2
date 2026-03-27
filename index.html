@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="./logo.png" />
+  <title>Bahçeşehir Üniversitesi Derslikleri</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#f0f2f7;
+      --surface:#fff;
+      --muted:#7a869a;
+      --text:#0f1923;
+      --border:#e2e6ed;
+      --primary:#1a56db;
+      --primary-soft:#e8effe;
+      --shadow-sm:0 1px 3px rgba(15,25,35,.07), 0 4px 12px rgba(15,25,35,.05);
+      --shadow-md:0 4px 16px rgba(15,25,35,.09), 0 1px 3px rgba(15,25,35,.06);
+      --shadow-lg:0 12px 40px rgba(15,25,35,.13);
+      --radius:16px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+    .container{width:min(1200px,calc(100% - 40px));margin:0 auto}
+
+    /* ── TOPBAR ── */
+    .topbar{
+      position:sticky;top:0;z-index:20;
+      background:rgba(255,255,255,.88);
+      backdrop-filter:blur(16px);
+      border-bottom:1px solid rgba(226,230,237,.8);
+    }
+    .topbar-inner{
+      height:68px;display:flex;align-items:center;justify-content:space-between;gap:16px
+    }
+    .brand{display:flex;align-items:center;gap:12px}
+    .brand-logo{width:38px;height:38px;object-fit:contain;display:block}
+    .brand-text h1{font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+    .brand-text p{font-size:12px;color:var(--muted);margin-top:1px}
+
+    /* ── SEARCH BAR ── */
+    .search-bar{
+      background:#fff;
+      border-bottom:1px solid var(--border);
+      padding:18px 0;
+    }
+    .search-inner{
+      display:grid;
+      grid-template-columns:1fr 1fr 2fr auto auto;
+      gap:10px;
+      align-items:center;
+    }
+    .control{position:relative}
+    .control-icon{
+      position:absolute;left:14px;top:50%;transform:translateY(-50%);
+      color:#b0b9c8;font-size:16px;pointer-events:none;z-index:1
+    }
+    .input,.select{
+      width:100%;height:44px;border:1px solid var(--border);border-radius:12px;
+      background:#f7f8fb;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;
+      outline:none;transition:border-color .15s,box-shadow .15s;
+      appearance:none;
+    }
+    .input:focus,.select:focus{
+      border-color:var(--primary);
+      box-shadow:0 0 0 3px rgba(26,86,219,.1);
+      background:#fff;
+    }
+    .select{padding:0 36px 0 14px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b0b9c8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+    .input{padding:0 14px 0 40px}
+    .results-count{
+      font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap;
+      background:#f7f8fb;border:1px solid var(--border);
+      height:44px;padding:0 16px;border-radius:12px;
+      display:flex;align-items:center;gap:6px;
+    }
+    .results-count strong{color:var(--text)}
+
+    /* ── CUSTOM DROPDOWN ── */
+    .cd-wrap{position:relative}
+    .cd-btn{
+      width:100%;height:44px;padding:0 34px 0 14px;
+      border:1px solid var(--border);border-radius:12px;
+      background:#f7f8fb url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b0b9c8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;
+      color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;
+      text-align:left;cursor:pointer;outline:none;border:none;
+      border:1px solid var(--border);
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      transition:border-color .15s,box-shadow .15s,background .15s;
+    }
+    .cd-btn:hover{background-color:#fff;border-color:#c5ccd8}
+    .cd-btn.open{background-color:#fff;border-color:var(--primary);box-shadow:0 0 0 3px rgba(26,86,219,.1)}
+    .cd-panel{
+      position:absolute;top:calc(100% + 6px);left:0;z-index:40;
+      min-width:100%;max-width:300px;
+      background:#fff;border:1px solid var(--border);border-radius:14px;
+      box-shadow:var(--shadow-lg);
+      padding:6px;
+      opacity:0;pointer-events:none;transform:translateY(-6px);
+      transition:opacity .15s,transform .15s;
+      max-height:280px;overflow-y:auto;
+    }
+    .cd-panel.open{opacity:1;pointer-events:all;transform:translateY(0)}
+    .cd-option{
+      display:flex;align-items:center;gap:10px;
+      padding:9px 12px;border-radius:9px;
+      font-size:13.5px;font-weight:500;color:#344054;cursor:pointer;
+      transition:background .1s;white-space:nowrap;
+    }
+    .cd-option:hover{background:#f5f7fb}
+    .cd-option.selected{background:var(--primary-soft);color:var(--primary);font-weight:700}
+    .cd-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--border)}
+    .cd-option.selected .cd-dot{background:var(--primary)}
+
+    .sort-wrap{position:relative}
+    .sort-btn{
+      height:44px;padding:0 14px;border-radius:12px;
+      border:1px solid var(--border);background:#f7f8fb;
+      color:#5a6477;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;
+      cursor:pointer;white-space:nowrap;
+      display:flex;align-items:center;gap:6px;
+      transition:background .15s,border-color .15s,color .15s;
+    }
+    .sort-btn:hover{background:#fff;border-color:#c5ccd8;color:var(--text)}
+    .sort-btn.open{background:#fff;border-color:var(--primary);color:var(--primary)}
+    .sort-dropdown{
+      position:absolute;top:calc(100% + 8px);right:0;z-index:30;
+      background:#fff;border:1px solid var(--border);border-radius:14px;
+      box-shadow:var(--shadow-lg);
+      min-width:190px;padding:6px;
+      opacity:0;pointer-events:none;transform:translateY(-6px);
+      transition:opacity .15s,transform .15s;
+    }
+    .sort-dropdown.open{opacity:1;pointer-events:all;transform:translateY(0)}
+    .sort-option{
+      display:flex;align-items:center;gap:10px;
+      padding:9px 12px;border-radius:9px;
+      font-size:13.5px;font-weight:500;color:#344054;cursor:pointer;
+      transition:background .12s;
+    }
+    .sort-option:hover{background:#f5f7fb}
+    .sort-option.selected{background:var(--primary-soft);color:var(--primary);font-weight:700}
+    .sort-option-icon{font-size:13px;width:16px;text-align:center;opacity:.6}
+
+    /* ── GRID ── */
+    .content{padding:28px 0 64px}
+    .loading,.empty{
+      padding:40px;text-align:center;color:var(--muted);background:#fff;
+      border:1px dashed var(--border);border-radius:var(--radius)
+    }
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+      gap:20px;
+    }
+
+    /* ── CARD ── */
+    .card{
+      background:#fff;border:1px solid var(--border);
+      border-radius:var(--radius);overflow:hidden;
+      box-shadow:var(--shadow-sm);
+      cursor:pointer;
+      transition:transform .2s cubic-bezier(.34,1.56,.64,1), box-shadow .2s ease;
+      display:flex;flex-direction:column;
+    }
+    .card:hover{
+      box-shadow:var(--shadow-lg);
+      border-color:#d0d7e3;
+    }
+    .card-img-wrap{position:relative;overflow:hidden}
+    .card img{
+      width:100%;height:200px;object-fit:cover;display:block;
+      background:#edf0f5;
+    }
+    .card-badge{
+      position:absolute;top:12px;left:12px;
+      background:rgba(15,25,35,.55);
+      backdrop-filter:blur(8px);
+      color:#fff;font-size:12px;font-weight:700;
+      padding:4px 10px;border-radius:8px;
+      letter-spacing:.03em;
+    }
+    .card-body{padding:16px;flex:1;display:flex;flex-direction:column;gap:6px}
+    .card-title{font-size:17px;font-weight:700;letter-spacing:-.01em}
+    .card-location{font-size:13px;color:var(--muted);line-height:1.5}
+    .card-meta{
+      margin-top:auto;padding-top:12px;
+      border-top:1px solid #f0f2f7;
+      display:flex;gap:14px;flex-wrap:wrap;
+    }
+    .card-meta span{
+      font-size:12.5px;color:#5a6477;font-weight:500;
+      display:flex;align-items:center;gap:4px;
+    }
+
+    /* ── MODAL ── */
+    .modal{
+      position:fixed;inset:0;z-index:60;background:rgba(10,15,25,.82);
+      display:none;align-items:center;justify-content:center;padding:20px;
+      backdrop-filter:blur(8px)
+    }
+    .modal.active{display:flex}
+    .modal-box{
+      width:min(1040px,100%);border-radius:22px;overflow:hidden;position:relative;
+      background:#0d1829;box-shadow:0 40px 100px rgba(0,0,0,.45);
+    }
+    .modal-stage{
+      position:relative;width:100%;background:#0d1829
+    }
+    .main-image{width:100%;height:auto;max-height:80vh;object-fit:contain;display:block;background:#0d1829}
+    .thumbs{
+      position:absolute;left:20px;top:20px;z-index:4;
+      display:flex;gap:7px;flex-wrap:wrap;max-width:calc(100% - 80px)
+    }
+    .thumbs img{
+      width:68px;height:50px;object-fit:contain;border-radius:9px;cursor:pointer;
+      border:2px solid transparent;background:rgba(0,0,0,.4);
+      box-shadow:0 4px 12px rgba(0,0,0,.25);
+      transition:border-color .15s,transform .15s;
+    }
+    .thumbs img:hover{transform:scale(1.06)}
+    .thumbs img.active{border-color:#fff}
+    .close{
+      position:absolute;top:16px;right:16px;z-index:5;
+      width:38px;height:38px;border:none;border-radius:10px;
+      background:rgba(255,255,255,.12);color:#fff;font-size:17px;cursor:pointer;
+      backdrop-filter:blur(6px);transition:background .15s;
+    }
+    .close:hover{background:rgba(255,255,255,.22)}
+    .modal-overlay{
+      position:absolute;inset:0;
+      background:linear-gradient(to top, rgba(0,0,0,.8) 0%, rgba(0,0,0,.3) 40%, transparent 70%);
+      display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding:24px
+    }
+    .modal-info{color:#fff;max-width:calc(100% - 160px)}
+    .modal-title{font-size:24px;font-weight:700;margin-bottom:6px;letter-spacing:-.02em}
+    .modal-meta{font-size:14px;line-height:1.7;color:rgba(255,255,255,.82)}
+    .modal-actions{display:flex;gap:8px;align-items:center}
+    .action-btn{
+      display:inline-flex;align-items:center;gap:7px;text-decoration:none;
+      padding:10px 16px;border-radius:12px;
+      border:1px solid rgba(255,255,255,.25);
+      background:rgba(255,255,255,.1);color:#fff;font-size:13.5px;font-weight:600;
+      backdrop-filter:blur(8px);cursor:pointer;
+      transition:background .15s,border-color .15s;
+    }
+    .action-btn:hover{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.45)}
+
+
+    /* ── SCROLL TO TOP ── */
+    #scrollTopBtn{
+      position:fixed;
+      right:20px;
+      bottom:24px;
+      z-index:100;
+      width:46px;
+      height:46px;
+      border:none;
+      border-radius:12px;
+      background:var(--primary);
+      color:#fff;
+      font-size:18px;
+      font-weight:700;
+      cursor:pointer;
+      box-shadow:var(--shadow-md);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      opacity:0;
+      pointer-events:none;
+      transform:translateY(10px);
+      transition:opacity .25s ease, transform .25s ease, background .15s ease;
+    }
+    #scrollTopBtn.show{
+      opacity:1;
+      pointer-events:auto;
+      transform:translateY(0);
+    }
+    #scrollTopBtn:hover{background:#1749b8}
+
+    @media (max-width:900px){
+      .search-inner{grid-template-columns:1fr 1fr}
+      .results-count{display:none}
+    }
+    @media (max-width:600px){
+      .search-inner{grid-template-columns:1fr}
+      .grid{gap:14px}
+      .thumbs img{width:54px;height:40px}
+      .modal-overlay{padding:16px;flex-direction:column;align-items:flex-start}
+      .modal-info{max-width:100%}
+      .modal-title{font-size:19px}
+      #scrollTopBtn{right:16px;bottom:18px;width:42px;height:42px}
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <div class="brand">
+        <img class="brand-logo" src="./logo.png" alt="Bahçeşehir Üniversitesi logosu" />
+        <div class="brand-text">
+          <h1 id="siteTitle">Bahçeşehir Üniversitesi Derslikleri</h1>
+          <p id="siteSubtitle">Derslik Görselleri</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="search-bar">
+    <div class="container">
+      <div class="search-inner">
+        <div class="cd-wrap">
+          <button id="campusBtn" class="cd-btn">Tüm Kampüsler</button>
+          <div id="campusPanel" class="cd-panel"></div>
+        </div>
+        <div class="cd-wrap">
+          <button id="buildingBtn" class="cd-btn">Tüm Binalar</button>
+          <div id="buildingPanel" class="cd-panel"></div>
+        </div>
+        <div class="control">
+          <span class="control-icon">⌕</span>
+          <input id="searchInput" class="input" type="text" placeholder="Sınıf adı ile ara..." />
+        </div>
+        <div class="sort-wrap">
+          <button id="sortBtn" class="sort-btn">
+            ↕ <span id="sortLabel">Sırala</span>
+          </button>
+          <div id="sortDropdown" class="sort-dropdown">
+            <div class="sort-option selected" data-value="name-asc"><span class="sort-option-icon">↑</span>Ada göre (A→Z)</div>
+            <div class="sort-option" data-value="name-desc"><span class="sort-option-icon">↓</span>Ada göre (Z→A)</div>
+            <div class="sort-option" data-value="capacity-desc"><span class="sort-option-icon">↓</span>Kapasite (çoktan aza)</div>
+            <div class="sort-option" data-value="capacity-asc"><span class="sort-option-icon">↑</span>Kapasite (azdan çoğa)</div>
+            <div class="sort-option" data-value="floor-asc"><span class="sort-option-icon">↑</span>Kata göre</div>
+          </div>
+        </div>
+        <div class="results-count">
+          <strong><span id="resultCount">0</span></strong> sınıf
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main class="content">
+    <div class="container">
+      <div id="loadingState" class="loading">Veriler yükleniyor...</div>
+      <div id="cardGrid" class="grid" style="display:none;"></div>
+      <div id="emptyState" class="empty" style="display:none;">Filtreye uygun sınıf bulunamadı.</div>
+    </div>
+  </main>
+
+  <div id="galleryModal" class="modal">
+    <div class="modal-box">
+      <button id="closeModal" class="close">✕</button>
+      <div id="thumbGrid" class="thumbs"></div>
+      <div class="modal-stage">
+        <img id="mainImage" class="main-image" src="" alt="Sınıf görseli" crossorigin="anonymous" />
+        <div class="modal-overlay">
+          <div class="modal-info">
+            <div id="modalTitle" class="modal-title"></div>
+            <div id="modalMeta" class="modal-meta"></div>
+          </div>
+          <div class="modal-actions">
+            <button id="copyImage" class="action-btn" type="button">⧉ Görseli Kopyala</button>
+            <button id="downloadImage" class="action-btn" type="button">⭳ Görseli İndir</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button id="scrollTopBtn" type="button" aria-label="En üste git">↑</button>
+
+  <script type="module">
+    import { db, storage } from './firebase-config.js';
+    import { collection, getDocs, query, orderBy, doc, getDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js';
+    import { ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-storage.js';
+    
+    const campusBtn     = document.getElementById('campusBtn');
+    const campusPanel   = document.getElementById('campusPanel');
+    const buildingBtn   = document.getElementById('buildingBtn');
+    const buildingPanel = document.getElementById('buildingPanel');
+    const searchInput   = document.getElementById('searchInput');
+    const cardGrid = document.getElementById('cardGrid');
+    const resultCount = document.getElementById('resultCount');
+    const emptyState = document.getElementById('emptyState');
+    const loadingState = document.getElementById('loadingState');
+
+    const galleryModal = document.getElementById('galleryModal');
+    const closeModal = document.getElementById('closeModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalMeta = document.getElementById('modalMeta');
+    const mainImage = document.getElementById('mainImage');
+    const thumbGrid = document.getElementById('thumbGrid');
+    const downloadImage = document.getElementById('downloadImage');
+    const copyImage = document.getElementById('copyImage');
+    const scrollTopBtn = document.getElementById('scrollTopBtn');
+
+    let classrooms = [];
+    let activeItem = null;
+    let activeImageUrl = '';
+    let currentSort     = 'name-asc';
+    let selectedCampus   = 'all';
+    let selectedBuilding = 'all';
+    const brandedImageBlobCache = new Map();
+
+    /* ── dropdown yardımcısı ── */
+    function buildDropdown(btn, panel, getItems, onPick) {
+      // Paneli aç/kapat
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const willOpen = !panel.classList.contains('open');
+        closeAllPanels();
+        if (willOpen) {
+          // Her açılışta güncel seçimi yansıt
+          renderOptions(panel, getItems(), onPick);
+          btn.classList.add('open');
+          panel.classList.add('open');
+        }
+      });
+    }
+
+    function renderOptions(panel, items, onPick) {
+      panel.innerHTML = items.map(({value, label, selected}) => `
+        <div class="cd-option${selected ? ' selected' : ''}" data-value="${value}" data-label="${label}">
+          <span class="cd-dot"></span>${label}
+        </div>
+      `).join('');
+      panel.querySelectorAll('.cd-option').forEach(opt => {
+        opt.addEventListener('click', e => {
+          e.stopPropagation();
+          onPick(opt.dataset.value, opt.dataset.label);
+          closeAllPanels();
+        });
+      });
+    }
+
+    function closeAllPanels() {
+      document.querySelectorAll('.cd-btn.open').forEach(b => b.classList.remove('open'));
+      document.querySelectorAll('.cd-panel.open').forEach(p => p.classList.remove('open'));
+      document.querySelectorAll('.sort-btn.open').forEach(b => b.classList.remove('open'));
+      document.querySelectorAll('.sort-dropdown.open').forEach(p => p.classList.remove('open'));
+    }
+    document.addEventListener('click', closeAllPanels);
+
+    /* Kampüs dropdown */
+    buildDropdown(
+      campusBtn, campusPanel,
+      () => {
+        const names = [...new Set(classrooms.map(c => c.campusName).filter(Boolean))];
+        return [
+          { value: 'all',  label: 'Tüm Kampüsler', selected: selectedCampus === 'all' },
+          ...names.map(n => ({ value: n, label: n, selected: selectedCampus === n }))
+        ];
+      },
+      (value, label) => {
+        selectedCampus   = value;
+        selectedBuilding = 'all';
+        campusBtn.textContent   = label;
+        buildingBtn.textContent = 'Tüm Binalar';
+        renderCards();
+      }
+    );
+
+    /* Bina dropdown */
+    buildDropdown(
+      buildingBtn, buildingPanel,
+      () => {
+        const names = [...new Set(
+          classrooms
+            .filter(c => selectedCampus === 'all' || c.campusName === selectedCampus)
+            .map(c => c.blockName).filter(Boolean)
+        )];
+        return [
+          { value: 'all', label: 'Tüm Binalar', selected: selectedBuilding === 'all' },
+          ...names.map(n => ({ value: n, label: n, selected: selectedBuilding === n }))
+        ];
+      },
+      (value, label) => {
+        selectedBuilding = value;
+        buildingBtn.textContent = label;
+        renderCards();
+      }
+    );
+
+    /* Sıralama dropdown */
+    const sortBtn      = document.getElementById('sortBtn');
+    const sortLabel    = document.getElementById('sortLabel');
+    const sortDropdown = document.getElementById('sortDropdown');
+    const sortLabels   = {
+      'name-asc':'Ada göre (A→Z)', 'name-desc':'Ada göre (Z→A)',
+      'capacity-desc':'Kapasite ↓', 'capacity-asc':'Kapasite ↑', 'floor-asc':'Kata göre',
+    };
+    sortBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const willOpen = !sortDropdown.classList.contains('open');
+      closeAllPanels();
+      if (willOpen) { sortBtn.classList.add('open'); sortDropdown.classList.add('open'); }
+    });
+    sortDropdown.querySelectorAll('.sort-option').forEach(opt => {
+      opt.addEventListener('click', e => {
+        e.stopPropagation();
+        currentSort = opt.dataset.value;
+        sortLabel.textContent = sortLabels[currentSort];
+        sortDropdown.querySelectorAll('.sort-option').forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+        closeAllPanels();
+        renderCards();
+      });
+    });
+
+    function floorNumber(text) {
+      const match = String(text || '').match(/\d+/);
+      return match ? Number(match[0]) : 0;
+    }
+
+    async function loadSettings() {
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'site'));
+        if (snap.exists()) {
+          const s = snap.data();
+          document.getElementById('siteTitle').textContent = s.title || 'Bahçeşehir Üniversitesi Derslikleri';
+          document.getElementById('siteSubtitle').textContent = s.subtitle || 'Derslik Görselleri';
+        }
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+
+    function fillCampusOptions() { /* paneller buildDropdown içinde dinamik oluşturuluyor */ }
+    function fillBuildingOptions() { /* paneller buildDropdown içinde dinamik oluşturuluyor */ }
+
+    function getFilteredClassrooms() {
+      const q = searchInput.value.trim().toLowerCase();
+      let items = classrooms.filter(item => {
+        const okCampus   = selectedCampus   === 'all' || item.campusName === selectedCampus;
+        const okBuilding = selectedBuilding === 'all' || item.blockName  === selectedBuilding;
+        const okSearch   = !q || String(item.code || '').toLowerCase().includes(q);
+        return okCampus && okBuilding && okSearch;
+      });
+      items.sort((a, b) => {
+        switch (currentSort) {
+          case 'name-desc':     return String(b.code||'').localeCompare(String(a.code||''),'tr');
+          case 'capacity-desc': return Number(b.capacity||0) - Number(a.capacity||0);
+          case 'capacity-asc':  return Number(a.capacity||0) - Number(b.capacity||0);
+          case 'floor-asc':     return floorNumber(a.floor)  - floorNumber(b.floor);
+          default:              return String(a.code||'').localeCompare(String(b.code||''),'tr');
+        }
+      });
+      return items;
+    }
+
+    function setActiveImage(url) {
+      activeImageUrl = url || '';
+      mainImage.src = activeImageUrl;
+    }
+
+    function openModal(item) {
+      const images = Array.isArray(item.images) ? item.images : [];
+      const first = images[0] || '';
+      activeItem = item;
+      modalTitle.textContent = item.code || '-';
+      modalMeta.innerHTML = `${item.campusName || '-'} › ${item.blockName || '-'} &nbsp; 👥 ${item.capacity || 0} kişi kapasiteli &nbsp; 📍 ${item.floor || '-'}`;
+      setActiveImage(first);
+
+      thumbGrid.innerHTML = images.map((image, index) => `
+        <img src="${image}" alt="${item.code || 'Derslik'} küçük görsel ${index + 1}" class="${index === 0 ? 'active' : ''}" data-src="${image}" crossorigin="anonymous" />
+      `).join('');
+
+      thumbGrid.querySelectorAll('img').forEach(img => {
+        img.addEventListener('click', () => {
+          setActiveImage(img.dataset.src);
+          thumbGrid.querySelectorAll('img').forEach(t => t.classList.remove('active'));
+          img.classList.add('active');
+        });
+      });
+
+      galleryModal.classList.add('active');
+    }
+
+    function renderCards() {
+      const items = getFilteredClassrooms();
+      resultCount.textContent = items.length;
+      cardGrid.innerHTML = '';
+      loadingState.style.display = 'none';
+      cardGrid.style.display = 'grid';
+
+      if (!items.length) {
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+
+      items.forEach(item => {
+        const firstImage = Array.isArray(item.images) && item.images.length ? item.images[0] : '';
+        const cardImage  = item.thumbnailUrl || firstImage;
+        const card = document.createElement('article');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="card-img-wrap">
+            <img class="card-image" src="${cardImage}" alt="${item.code || 'Derslik'} görseli" crossorigin="anonymous" />
+            <span class="card-badge">${item.code || '-'}</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">${item.code || '-'}</div>
+            <div class="card-location">${item.campusName || '-'} › ${item.blockName || '-'}</div>
+            <div class="card-meta">
+              <span>📍 ${item.floor || '-'}</span>
+              <span>👥 ${item.capacity || 0} kişi</span>
+            </div>
+          </div>
+        `;
+        card.addEventListener('click', () => openModal(item));
+        cardGrid.appendChild(card);
+      });
+    }
+
+    async function loadClassrooms() {
+      loadingState.style.display = 'block';
+      try {
+        const q = query(
+          collection(db, 'classrooms'),
+          orderBy('code')
+        );
+
+        const snap = await getDocs(q);
+        // active alanı olmayan (undefined) veya true olanları göster
+        classrooms = snap.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(c => c.active !== false);
+        fillCampusOptions();
+        fillBuildingOptions();
+        renderCards();
+      } catch (error) {
+        loadingState.textContent = 'Veriler yüklenemedi. Firebase yapılandırmasını ve Firestore kurallarını kontrol edin.';
+        console.error(error);
+      }
+    }
+
+    function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+      const words = String(text || '').split(' ');
+      let line = '';
+      let currentY = y;
+
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && n > 0) {
+          ctx.fillText(line.trim(), x, currentY);
+          line = words[n] + ' ';
+          currentY += lineHeight;
+        } else {
+          line = testLine;
+        }
+      }
+      if (line.trim()) ctx.fillText(line.trim(), x, currentY);
+      return currentY;
+    }
+
+    async function generateBrandedImage(item, imageUrl) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.referrerPolicy = 'no-referrer';
+
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = imageUrl;
+      });
+
+      // Canvas'ı görselin orijinal boyutuna ayarla
+      const outputWidth = img.naturalWidth;
+      const outputHeight = img.naturalHeight;
+      const overlayHeight = Math.round(outputHeight * 0.19);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = outputWidth;
+      canvas.height = outputHeight;
+      const ctx = canvas.getContext('2d');
+
+      // Görseli birebir çiz, kırpma yok
+      ctx.drawImage(img, 0, 0, outputWidth, outputHeight);
+
+      const gradient = ctx.createLinearGradient(0, outputHeight - overlayHeight - 120, 0, outputHeight);
+      gradient.addColorStop(0, 'rgba(0,0,0,0)');
+      gradient.addColorStop(0.35, 'rgba(0,0,0,0.28)');
+      gradient.addColorStop(1, 'rgba(0,0,0,0.82)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, outputWidth, outputHeight);
+
+      // logo_gorsel.png dosyasını sol üstte düzgün boyutlandırılmış şekilde yerleştir
+      try {
+        const logo = new Image();
+        await new Promise((resolve, reject) => {
+          logo.onload = resolve;
+          logo.onerror = reject;
+          logo.src = './logo_gorsel.png';
+        });
+
+        const maxLogoWidth = Math.round(outputWidth * 0.20);
+        const maxLogoHeight = Math.round(outputHeight * 0.09);
+        const logoScale = Math.min(
+          maxLogoWidth / logo.width,
+          maxLogoHeight / logo.height
+        );
+        const logoWidth = logo.width * logoScale;
+        const logoHeight = logo.height * logoScale;
+
+        ctx.shadowColor = 'rgba(0,0,0,0.25)';
+        ctx.shadowBlur = 8;
+        const logoPad = Math.round(outputWidth * 0.037);
+        ctx.drawImage(logo, logoPad, Math.round(outputHeight * 0.05), logoWidth, logoHeight);
+        ctx.shadowBlur = 0;
+      } catch (e) {
+        // logo dosyası yoksa sessizce devam et
+      }
+
+      const pad = Math.round(outputWidth * 0.04);
+      const titleSize = Math.round(outputHeight * 0.054);
+      const metaSize  = Math.round(outputHeight * 0.028);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `800 ${titleSize}px Arial`;
+      ctx.fillText(item.code || '-', pad, outputHeight - Math.round(outputHeight * 0.096));
+
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.font = `400 ${metaSize}px Arial`;
+      const metaText = `${item.campusName || '-'} › ${item.blockName || '-'}   •   ${item.capacity || 0} kişi kapasiteli   •   ${item.floor || '-'}`;
+      wrapText(ctx, metaText, pad, outputHeight - Math.round(outputHeight * 0.048), outputWidth - pad * 2, Math.round(metaSize * 1.35));
+
+      return canvas;
+    }
+
+    function getBrandedCacheKey(item, imageUrl, format = 'jpeg') {
+      return `${item?.id || 'unknown'}__${imageUrl || ''}__${format}`;
+    }
+
+    async function blobFromUrl(url) {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Dosya indirilemedi');
+      return await response.blob();
+    }
+
+    async function canvasToBlob(canvas, type = 'image/jpeg', quality = 0.92) {
+      return await new Promise(resolve => canvas.toBlob(resolve, type, quality));
+    }
+
+    async function imageBlobToPngBlob(blob) {
+      const bitmap = await createImageBitmap(blob);
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(bitmap, 0, 0);
+      const pngBlob = await canvasToBlob(canvas, 'image/png');
+      if (!pngBlob) throw new Error('PNG blob oluşturulamadı');
+      return pngBlob;
+    }
+
+    function showClipboardSupportInfo() {
+      if (!window.isSecureContext) {
+        alert('Görsel kopyalama için site HTTPS altında açılmalıdır.');
+        return false;
+      }
+
+      if (!navigator.clipboard || typeof window.ClipboardItem === 'undefined') {
+        alert('Bu tarayıcı görsel kopyalamayı desteklemiyor. Lütfen indirme seçeneğini kullanın.');
+        return false;
+      }
+
+      return true;
+    }
+
+    async function getOrCreateBrandedBlob(item, imageUrl, buttonEl, loadingText = 'Hazırlanıyor...', format = 'jpeg') {
+      if (!item || !imageUrl) return null;
+
+      const cacheKey = getBrandedCacheKey(item, imageUrl, format);
+
+      if (brandedImageBlobCache.has(cacheKey)) {
+        return brandedImageBlobCache.get(cacheKey);
+      }
+
+      // PNG isteniyorsa önce kalıcı JPEG cache'i kullan / oluştur.
+      // Böylece kopyalama da indirme ile aynı şekilde tek sefer üretim + Storage kaydı yapar.
+      if (format === 'png') {
+        const jpegCacheKey = getBrandedCacheKey(item, imageUrl, 'jpeg');
+
+        let sourceJpegBlob = brandedImageBlobCache.get(jpegCacheKey) || null;
+
+        if (!sourceJpegBlob) {
+          if (item.brandedImageUrl) {
+            if (buttonEl) buttonEl.textContent = loadingText;
+            try {
+              sourceJpegBlob = await blobFromUrl(item.brandedImageUrl);
+              brandedImageBlobCache.set(jpegCacheKey, sourceJpegBlob);
+            } catch (e) {
+              item.brandedImageUrl = null;
+              item.brandedImagePath = null;
+            }
+          }
+        }
+
+        if (!sourceJpegBlob) {
+          sourceJpegBlob = await getOrCreateBrandedBlob(item, imageUrl, buttonEl, loadingText, 'jpeg');
+        }
+
+        if (!sourceJpegBlob) throw new Error('Kaynak görsel hazırlanamadı');
+
+        if (buttonEl) buttonEl.textContent = loadingText;
+        const pngBlob = await imageBlobToPngBlob(sourceJpegBlob);
+        brandedImageBlobCache.set(cacheKey, pngBlob);
+        return pngBlob;
+      }
+
+      // JPEG için önce oturum cache'i, sonra kalıcı brandedImageUrl kullan.
+      if (item.brandedImageUrl) {
+        if (buttonEl) buttonEl.textContent = loadingText;
+        try {
+          const cachedBlob = await blobFromUrl(item.brandedImageUrl);
+          brandedImageBlobCache.set(cacheKey, cachedBlob);
+          return cachedBlob;
+        } catch (e) {
+          item.brandedImageUrl = null;
+          item.brandedImagePath = null;
+        }
+      }
+
+      if (buttonEl) buttonEl.textContent = loadingText;
+      const canvas = await generateBrandedImage(item, imageUrl);
+
+      const blob = await canvasToBlob(canvas, 'image/jpeg', 0.92);
+      if (!blob) throw new Error('Blob oluşturulamadı');
+
+      brandedImageBlobCache.set(cacheKey, blob);
+
+      try {
+        if (buttonEl) buttonEl.textContent = 'Kaydediliyor...';
+        const path = `branded/${item.id}-${item.code || 'derslik'}.jpg`;
+        const storageRef = ref(storage, path);
+        await uploadBytes(storageRef, blob);
+        const downloadUrl = await getDownloadURL(storageRef);
+        await updateDoc(doc(db, 'classrooms', item.id), {
+          brandedImageUrl: downloadUrl,
+          brandedImagePath: path
+        });
+        item.brandedImageUrl = downloadUrl;
+        item.brandedImagePath = path;
+
+        const cached = classrooms.find(c => c.id === item.id);
+        if (cached) {
+          cached.brandedImageUrl = downloadUrl;
+          cached.brandedImagePath = path;
+        }
+      } catch (uploadErr) {
+        console.warn('Branded görsel Storage\'a yüklenemedi:', uploadErr);
+      }
+
+      return blob;
+    }
+
+    async function fallbackToDownloadFromBlob(blob, fileName) {
+      const localUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = localUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(localUrl);
+    }
+
+    async function handleCanvasDownload() {
+      if (!activeItem || !activeImageUrl) return;
+
+      const originalText = downloadImage.textContent;
+      downloadImage.disabled = true;
+      if (copyImage) copyImage.disabled = true;
+
+      try {
+        const blob = await getOrCreateBrandedBlob(activeItem, activeImageUrl, downloadImage, 'Hazırlanıyor...', 'jpeg');
+        if (!blob) throw new Error('Görsel hazırlanamadı');
+
+        downloadImage.textContent = 'İndiriliyor...';
+        await fallbackToDownloadFromBlob(blob, `BAU-${activeItem.code || 'derslik'}.jpg`);
+      } catch (error) {
+        console.error(error);
+        alert('Görsel oluşturulamadı. Storage erişimi veya CORS ayarlarını kontrol edin.');
+      } finally {
+        downloadImage.disabled = false;
+        if (copyImage) copyImage.disabled = false;
+        downloadImage.textContent = originalText;
+      }
+    }
+
+    async function handleCanvasCopy() {
+      if (!activeItem || !activeImageUrl) return;
+
+      if (!showClipboardSupportInfo()) return;
+
+      const originalText = copyImage.textContent;
+      copyImage.disabled = true;
+      downloadImage.disabled = true;
+
+      try {
+        const blob = await getOrCreateBrandedBlob(activeItem, activeImageUrl, copyImage, 'Hazırlanıyor...', 'png');
+        if (!blob) throw new Error('Görsel hazırlanamadı');
+
+        copyImage.textContent = 'Kopyalanıyor...';
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            [blob.type || 'image/png']: blob
+          })
+        ]);
+
+        copyImage.textContent = 'Kopyalandı ✓';
+        setTimeout(() => {
+          if (copyImage) copyImage.textContent = originalText;
+        }, 1400);
+      } catch (error) {
+        console.error(error);
+        try {
+          const jpegBlob = await getOrCreateBrandedBlob(activeItem, activeImageUrl, copyImage, 'Hazırlanıyor...', 'jpeg');
+          if (jpegBlob) {
+            await fallbackToDownloadFromBlob(jpegBlob, `BAU-${activeItem.code || 'derslik'}.jpg`);
+            alert('Tarayıcı kopyalamaya izin vermedi. Görsel bunun yerine indirildi.');
+          } else {
+            throw error;
+          }
+        } catch (fallbackError) {
+          console.error(fallbackError);
+          alert('Görsel panoya kopyalanamadı. Tarayıcı izinlerini kontrol edin.');
+        }
+      } finally {
+        copyImage.disabled = false;
+        downloadImage.disabled = false;
+        if (copyImage.textContent !== 'Kopyalandı ✓') {
+          copyImage.textContent = originalText;
+        }
+      }
+    }
+
+    searchInput.addEventListener('input', renderCards);
+    closeModal.addEventListener('click', () => galleryModal.classList.remove('active'));
+    galleryModal.addEventListener('click', e => { if (e.target === galleryModal) galleryModal.classList.remove('active'); });
+    downloadImage.addEventListener('click', handleCanvasDownload);
+    if (copyImage) copyImage.addEventListener('click', handleCanvasCopy);
+
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 300) {
+        scrollTopBtn.classList.add('show');
+      } else {
+        scrollTopBtn.classList.remove('show');
+      }
+    });
+
+    scrollTopBtn.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    await loadSettings();
+    loadClassrooms();
+  </script>
+</body>
+</html>
