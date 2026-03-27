@@ -425,6 +425,7 @@
           <button class="tab-btn" data-tab="blocks">Bloklar</button>
           <button class="tab-btn" data-tab="classrooms">Sınıflar</button>
           <button class="tab-btn" data-tab="types">Derslik Türleri</button>
+          <button class="tab-btn" data-tab="floors">Katlar</button>
           <button class="tab-btn" data-tab="settings">Ayarlar</button>
           <button class="tab-btn" data-tab="map">🗺 Harita</button>
         </div>
@@ -481,6 +482,31 @@
               <div id="typeStatus" class="status"></div>
               <div id="typeList" class="list" style="margin-top:14px;"></div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="floorsPanel" class="panel">
+        <div class="toolbar">
+          <div class="toolbar-left"><strong><span id="floorCount">0</span></strong> tanımlı kat</div>
+          <div class="toolbar-right">
+            <button id="newFloorBtn" class="btn btn-primary">＋ Yeni Kat</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body">
+            <div class="grid2">
+              <div class="field">
+                <label>Kampüs Filtre</label>
+                <select id="floorFilterCampus"><option value="">Tüm Kampüsler</option></select>
+              </div>
+              <div class="field">
+                <label>Blok Filtre</label>
+                <select id="floorFilterBlock"><option value="">Tüm Bloklar</option></select>
+              </div>
+            </div>
+            <div id="floorStatus" class="status"></div>
+            <div id="floorList" class="list"></div>
           </div>
         </div>
       </section>
@@ -697,6 +723,29 @@
           <div id="blockImagePreview" class="thumbs"></div>
         </div>
 
+        <div id="floorForm" class="hidden">
+          <div class="grid2">
+            <div class="field">
+              <label>Kampüs</label>
+              <select id="floorCampusId"></select>
+            </div>
+            <div class="field">
+              <label>Blok</label>
+              <select id="floorBlockId"></select>
+            </div>
+          </div>
+          <div class="grid2">
+            <div class="field">
+              <label>Kat Adı</label>
+              <input id="floorName" type="text" placeholder="Örn: 2.Kat" />
+            </div>
+            <div class="field">
+              <label>Sıra No <span style="color:#98a2b3;font-weight:400">(küçük sayı önce gelir)</span></label>
+              <input id="floorSortOrder" type="number" min="0" placeholder="2" />
+            </div>
+          </div>
+        </div>
+
         <div id="classroomForm" class="hidden">
           <div class="grid2">
             <div class="field">
@@ -793,6 +842,7 @@
     let blocks = [];
     let classrooms = [];
     let classroomTypes = [];
+    let blockFloors = [];
     let settings = {};
     let currentTab = 'campuses';
     let modalType = null;
@@ -891,6 +941,12 @@
       return String(raw || '').trim();
     }
 
+    function getManagedFloorsForBlock(blockId) {
+      return blockFloors
+        .filter(f => f.blockId === blockId)
+        .sort((a,b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999) || (a.name || '').localeCompare(b.name || '', 'tr'));
+    }
+
     function getFloorOptionsForBlock(blockId, extraValues=[]) {
       const values = [];
       const seen = new Set();
@@ -901,11 +957,16 @@
         values.push(value);
       };
 
-      const block = blocks.find(b => b.id === blockId);
-      if (block && Number.isFinite(Number(block.floorCount))) {
-        const count = Math.max(0, Number(block.floorCount));
-        for (let f = 0; f <= count; f++) {
-          push(f === 0 ? 'Zemin Kat' : `${f}.Kat`);
+      const managed = getManagedFloorsForBlock(blockId);
+      if (managed.length) {
+        managed.forEach(f => push(f.name));
+      } else {
+        const block = blocks.find(b => b.id === blockId);
+        if (block && Number.isFinite(Number(block.floorCount))) {
+          const count = Math.max(0, Number(block.floorCount));
+          for (let f = 0; f <= count; f++) {
+            push(f === 0 ? 'Zemin Kat' : `${f}.Kat`);
+          }
         }
       }
 
@@ -917,9 +978,15 @@
       extraValues.forEach(push);
 
       return values.sort((a,b) => {
-        const na = a.toLowerCase().includes('zemin') ? 0 : parseInt(a,10);
-        const nb = b.toLowerCase().includes('zemin') ? 0 : parseInt(b,10);
-        if (!Number.isNaN(na) && !Number.isNaN(nb) && na !== nb) return na-nb;
+        const normalize = (val) => {
+          const s = String(val || '').toLowerCase().replace(/\s/g, '');
+          if (s.includes('zemin')) return 0;
+          const m = s.match(/(\d+)/);
+          return m ? Number(m[1]) : Number.NaN;
+        };
+        const na = normalize(a);
+        const nb = normalize(b);
+        if (!Number.isNaN(na) && !Number.isNaN(nb) && na !== nb) return na - nb;
         return a.localeCompare(b, 'tr');
       });
     }
@@ -941,9 +1008,9 @@
       currentThumbnailIndex = 0;
       clearStatus($('modalStatus'));
       $('deleteEntityBtn').classList.add('hidden');
-      ['campusForm','blockForm','classroomForm'].forEach(id => $(id).classList.add('hidden'));
+      ['campusForm','blockForm','classroomForm','floorForm'].forEach(id => $(id).classList.add('hidden'));
       ['campusImagePreview','blockImagePreview','classroomImagePreview'].forEach(id => $(id).innerHTML = '');
-      ['campusName','campusSortOrder','blockName','blockFloorCount','blockSortOrder','classroomCode','classroomCapacity','classroomFloor','classroomType','classroomFeatures'].forEach(id => { if ($(id)) $(id).value = ''; });
+      ['campusName','campusSortOrder','blockName','blockFloorCount','blockSortOrder','classroomCode','classroomCapacity','classroomFloor','classroomType','classroomFeatures','floorName','floorSortOrder'].forEach(id => { if ($(id)) $(id).value = ''; });
       ['campusImage','blockImage','classroomImages'].forEach(id => { if ($(id)) $(id).value = ''; });
     }
 
@@ -977,6 +1044,21 @@
           $('blockSortOrder').value = data.sortOrder ?? '';
           currentImageObject = data.imageObject || (data.imageUrl ? { url: data.imageUrl } : null);
           previewSingle('blockImagePreview', currentImageObject);
+        }
+      }
+
+      if (type === 'floor') {
+        fillCampusSelect('floorCampusId');
+        fillBlockSelect('floorBlockId', data?.campusId || $('floorCampusId').value);
+        $('modalTitle').textContent = data ? 'Kat Düzenle' : 'Yeni Kat';
+        $('floorForm').classList.remove('hidden');
+        if (data) {
+          editingId = data.id;
+          $('floorCampusId').value = data.campusId || '';
+          fillBlockSelect('floorBlockId', data.campusId);
+          $('floorBlockId').value = data.blockId || '';
+          $('floorName').value = data.name || '';
+          $('floorSortOrder').value = data.sortOrder ?? '';
         }
       }
 
@@ -1027,6 +1109,17 @@
       $(selectId).innerHTML = filtered.map(b => `<option value="${b.id}">${escapeHtml(b.name || '')}</option>`).join('');
     }
 
+    $('floorCampusId').addEventListener('change', () => {
+      fillBlockSelect('floorBlockId', $('floorCampusId').value);
+    });
+
+    $('floorFilterCampus').addEventListener('change', () => {
+      fillFloorFilterBlocks();
+      renderFloorList();
+    });
+
+    $('floorFilterBlock').addEventListener('change', () => renderFloorList());
+
     $('classroomCampusId').addEventListener('change', () => {
       fillBlockSelect('classroomBlockId', $('classroomCampusId').value);
       fillClassroomFloorSelect($('classroomBlockId').value);
@@ -1056,11 +1149,12 @@
     });
 
     async function loadAll() {
-      const [campusSnap, blockSnap, classroomSnap, typeSnap] = await Promise.all([
+      const [campusSnap, blockSnap, classroomSnap, typeSnap, floorSnap] = await Promise.all([
         getDocs(query(collection(db, 'campuses'), orderBy('name'))),
         getDocs(query(collection(db, 'blocks'), orderBy('name'))),
         getDocs(query(collection(db, 'classrooms'), orderBy('code'))),
-        getDocs(query(collection(db, 'classroomTypes'), orderBy('name')))
+        getDocs(query(collection(db, 'classroomTypes'), orderBy('name'))),
+        getDocs(query(collection(db, 'blockFloors'), orderBy('sortOrder')))
       ]);
       campuses = campusSnap.docs.map(d => ({ id: d.id, ...d.data() }))
         .sort((a,b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999) || (a.name||'').localeCompare(b.name||'','tr'));
@@ -1073,6 +1167,7 @@
         return data;
       });
       classroomTypes = typeSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      blockFloors = floorSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
       try {
         const setSnap = await getDoc(doc(db, 'settings', 'site'));
@@ -1084,6 +1179,8 @@
       renderBlocks();
       renderClassrooms();
       renderTypeList();
+      fillFloorFilterCampuses();
+      renderFloorList();
       fillSettings();
       fillClassroomTypeSelect();
       loadMapPositions();
@@ -1097,6 +1194,7 @@
       $('blockCount').textContent = blocks.length;
       $('classroomCount').textContent = classrooms.filter(c => c.active !== false).length;
       $('typeCount').textContent = classroomTypes.length;
+      $('floorCount').textContent = blockFloors.length;
     }
 
     function campusBlockCount(campusId) {
@@ -1194,6 +1292,7 @@
           if (type === 'campus') openModal('campus', campuses.find(x => x.id === id));
           if (type === 'block') openModal('block', blocks.find(x => x.id === id));
           if (type === 'classroom') openModal('classroom', classrooms.find(x => x.id === id));
+          if (type === 'floor') openModal('floor', blockFloors.find(x => x.id === id));
         };
       });
       document.querySelectorAll('[data-del-type]').forEach(btn => {
@@ -1221,6 +1320,14 @@
         if (!confirm('Sınıf silinsin mi?')) return;
         for (const img of (item.imageObjects || [])) await deleteImageIfPossible(img);
         await deleteDoc(doc(db, 'classrooms', id));
+      }
+      if (type === 'floor') {
+        const item = blockFloors.find(x => x.id === id);
+        if (!item) return;
+        const used = classrooms.some(c => c.blockId === item.blockId && getClassroomFloorValue(c) === item.name);
+        if (used) { alert('Bu kat sınıflarda kullanıldığı için silinemez. Önce sınıfları başka kata taşıyın.'); return; }
+        if (!confirm('Kat silinsin mi?')) return;
+        await deleteDoc(doc(db, 'blockFloors', id));
       }
       await loadAll();
     }
@@ -1472,6 +1579,98 @@
       });
     }
 
+    function fillFloorFilterCampuses() {
+      const sel = $('floorFilterCampus');
+      if (!sel) return;
+      const current = sel.value;
+      sel.innerHTML = '<option value="">Tüm Kampüsler</option>' + campuses.map(c => `<option value="${c.id}">${escapeHtml(c.name || '')}</option>`).join('');
+      sel.value = campuses.some(c => c.id === current) ? current : '';
+      fillFloorFilterBlocks();
+    }
+
+    function fillFloorFilterBlocks() {
+      const campusId = $('floorFilterCampus').value;
+      const sel = $('floorFilterBlock');
+      const current = sel.value;
+      const filtered = blocks.filter(b => !campusId || b.campusId === campusId);
+      sel.innerHTML = '<option value="">Tüm Bloklar</option>' + filtered.map(b => `<option value="${b.id}">${escapeHtml(b.name || '')}</option>`).join('');
+      sel.value = filtered.some(b => b.id === current) ? current : '';
+    }
+
+    function renderFloorList() {
+      const list = $('floorList');
+      if (!list) return;
+      const campusId = $('floorFilterCampus').value;
+      const blockId = $('floorFilterBlock').value;
+      const filtered = blockFloors
+        .filter(f => !campusId || f.campusId === campusId)
+        .filter(f => !blockId || f.blockId === blockId)
+        .sort((a,b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999) || (a.name || '').localeCompare(b.name || '', 'tr'));
+
+      if (!filtered.length) {
+        list.innerHTML = '<div class="empty">Henüz tanımlı kat yok.</div>';
+        return;
+      }
+
+      list.innerHTML = filtered.map(f => `
+        <article class="item" style="min-height:auto">
+          <div class="item-left">
+            <div class="item-body">
+              <h3 class="item-title">${escapeHtml(f.name || '')}</h3>
+              <div class="item-meta">${escapeHtml(f.campusName || '-')} • ${escapeHtml(f.blockName || '-')} • Sıra: ${Number.isFinite(Number(f.sortOrder)) ? Number(f.sortOrder) : '-'}</div>
+            </div>
+          </div>
+          <div class="item-actions">
+            <button class="icon-btn" data-type="floor" data-id="${f.id}" title="Düzenle">✎</button>
+            <button class="icon-btn delete" data-del-type="floor" data-id="${f.id}" title="Sil">🗑</button>
+          </div>
+        </article>
+      `).join('');
+
+      wireListActions();
+    }
+
+    async function saveFloor() {
+      const campusId = $('floorCampusId').value;
+      const blockId = $('floorBlockId').value;
+      const name = $('floorName').value.trim();
+      const campus = campuses.find(c => c.id === campusId);
+      const block = blocks.find(b => b.id === blockId);
+      if (!campusId || !blockId || !name) return showStatus($('modalStatus'), 'Kampüs, blok ve kat adı zorunlu.', 'error');
+
+      const duplicate = blockFloors.find(f => f.blockId === blockId && (f.name || '').toLowerCase() === name.toLowerCase() && f.id !== editingId);
+      if (duplicate) return showStatus($('modalStatus'), 'Bu blok için aynı kat adı zaten tanımlı.', 'error');
+
+      const payload = {
+        campusId,
+        campusName: campus?.name || '',
+        blockId,
+        blockName: block?.name || '',
+        name,
+        sortOrder: $('floorSortOrder').value !== '' ? Number($('floorSortOrder').value) : null,
+        updatedAt: serverTimestamp()
+      };
+
+      if (editingId) {
+        const previous = blockFloors.find(f => f.id === editingId);
+        await updateDoc(doc(db, 'blockFloors', editingId), payload);
+
+        if (previous && previous.blockId === blockId && previous.name !== name) {
+          const affected = classrooms.filter(c => c.blockId === blockId && getClassroomFloorValue(c) === previous.name);
+          for (const room of affected) {
+            await updateDoc(doc(db, 'classrooms', room.id), {
+              floor: name,
+              'features.floor': name,
+              updatedAt: serverTimestamp()
+            });
+          }
+        }
+      } else {
+        payload.createdAt = serverTimestamp();
+        await addDoc(collection(db, 'blockFloors'), payload);
+      }
+    }
+
     function fillSettings() {
       $('settingTitle').value = settings.title || 'Bahçeşehir Üniversitesi Derslikleri';
       $('settingSubtitle').value = settings.subtitle || 'Derslik Görselleri';
@@ -1584,6 +1783,8 @@
       $('bulkThumbModal').classList.remove('active');
     });
 
+    $('newFloorBtn').addEventListener('click', () => openModal('floor'));
+
     $('addTypeBtn').addEventListener('click', async () => {
       clearStatus($('typeStatus'));
       const name = $('newTypeName').value.trim();
@@ -1633,6 +1834,7 @@
         if (modalType === 'campus') await saveCampus();
         if (modalType === 'block') await saveBlock();
         if (modalType === 'classroom') await saveClassroom();
+        if (modalType === 'floor') await saveFloor();
 
         closeModal();
         await loadAll();
