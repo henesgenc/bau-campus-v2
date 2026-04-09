@@ -771,9 +771,15 @@
                 <label>Kampüs</label>
                 <select id="mapCampusFilter"></select>
               </div>
-              <div class="field" style="margin-bottom:0">
+              <div class="field" style="margin-bottom:10px">
                 <label>Blok</label>
-                <select id="mapBlockFilter"></select>
+                <select id="mapBlockFilter" disabled style="opacity:0.5;cursor:not-allowed"></select>
+              </div>
+              <div class="field" style="margin-bottom:0">
+                <label>Kat</label>
+                <select id="mapFloorSelect" disabled style="opacity:0.5;cursor:not-allowed">
+                  <option value="">— Önce Blok Seçin —</option>
+                </select>
               </div>
             </div>
 
@@ -908,10 +914,6 @@
             <!-- Main canvas area (hidden initially) -->
             <div id="mapMainArea" style="display:none">
               <div class="map-toolbar">
-                <label>Zemin:</label>
-                <select id="mapFloorSelect">
-                  <option value="">— Tüm Katlar —</option>
-                </select>
                 <div style="flex:1"></div>
                 <button class="btn btn-ghost" id="mapZoomOut" style="padding:6px 12px;font-size:15px">−</button>
                 <span id="mapZoomLabel" style="font-size:13px;font-weight:700;min-width:42px;text-align:center">100%</span>
@@ -2199,7 +2201,17 @@
       const sel = $('mapCampusFilter');
       sel.innerHTML = '<option value="">— Kampüs Seç —</option>' +
         campuses.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
-      $('mapBlockFilter').innerHTML = '<option value="">— Blok Seç —</option>';
+      // Reset and disable dependent selects
+      const blockSel = $('mapBlockFilter');
+      const floorSel = $('mapFloorSelect');
+      blockSel.innerHTML = '<option value="">— Önce Kampüs Seçin —</option>';
+      blockSel.disabled = true;
+      blockSel.style.opacity = '0.5';
+      blockSel.style.cursor = 'not-allowed';
+      floorSel.innerHTML = '<option value="">— Önce Blok Seçin —</option>';
+      floorSel.disabled = true;
+      floorSel.style.opacity = '0.5';
+      floorSel.style.cursor = 'not-allowed';
       updateMapUIState();
     }
     
@@ -2236,25 +2248,53 @@
 
     $('mapCampusFilter').addEventListener('change', () => {
       const cid = $('mapCampusFilter').value;
-      const sel = $('mapBlockFilter');
-      const filtered = blocks.filter(b => b.campusId === cid);
-      sel.innerHTML = '<option value="">— Blok Seç —</option>' +
-        filtered.map(b => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
+      const blockSel = $('mapBlockFilter');
+      const floorSel = $('mapFloorSelect');
+
+      // Reset floor first
+      floorSel.innerHTML = '<option value="">— Önce Blok Seçin —</option>';
+      floorSel.disabled = true;
+      floorSel.style.opacity = '0.5';
+      floorSel.style.cursor = 'not-allowed';
+
+      if (cid) {
+        const filtered = blocks.filter(b => b.campusId === cid);
+        blockSel.innerHTML = '<option value="">— Blok Seçin —</option>' +
+          filtered.map(b => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
+        blockSel.disabled = false;
+        blockSel.style.opacity = '1';
+        blockSel.style.cursor = 'pointer';
+      } else {
+        blockSel.innerHTML = '<option value="">— Önce Kampüs Seçin —</option>';
+        blockSel.disabled = true;
+        blockSel.style.opacity = '0.5';
+        blockSel.style.cursor = 'not-allowed';
+      }
+
       updateMapUIState();
       renderMapPanel();
     });
 
     $('mapBlockFilter').addEventListener('change', () => {
+      const bid = $('mapBlockFilter').value;
+      const floorSel = $('mapFloorSelect');
+
+      if (bid) {
+        const floorOptions = getFloorOptionsForBlock(bid);
+        floorSel.innerHTML = '<option value="">— Kat Seçin —</option>' +
+          floorOptions.map(f => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
+        floorSel.disabled = false;
+        floorSel.style.opacity = '1';
+        floorSel.style.cursor = 'pointer';
+      } else {
+        floorSel.innerHTML = '<option value="">— Önce Blok Seçin —</option>';
+        floorSel.disabled = true;
+        floorSel.style.opacity = '0.5';
+        floorSel.style.cursor = 'not-allowed';
+      }
+
       updateMapUIState();
       renderMapPanel();
-      // populate floor select
-      const bid = $('mapBlockFilter').value;
-      const block = blocks.find(b => b.id === bid);
-      const floorSel = $('mapFloorSelect');
-      floorSel.innerHTML = '<option value="">— Tüm Katlar —</option>';
-      getFloorOptionsForBlock(bid).forEach(floorValue => {
-        floorSel.innerHTML += `<option value="${escapeHtml(floorValue)}">${escapeHtml(floorValue)}</option>`;
-      });
     });
 
     $('mapFloorSelect').addEventListener('change', () => {
