@@ -346,6 +346,38 @@
     .map-room.door:hover { border-color:#6b5537; }
     .map-room.door.selected { background:#c89060; border-color:#5a4a2f; }
     
+    /* Door rendering as line on edge */
+    .map-room.door {
+      display:flex; align-items:center; justify-content:center;
+      font-size:9px; font-weight:800; letter-spacing:0.5px;
+      border-radius:2px;
+    }
+    
+    /* Edge hover highlighting for door placement */
+    .map-room.edge-highlight-top::before,
+    .map-room.edge-highlight-right::before,
+    .map-room.edge-highlight-bottom::before,
+    .map-room.edge-highlight-left::before {
+      content: '';
+      position: absolute;
+      background: rgba(212, 165, 116, 0.6);
+      pointer-events: none;
+      z-index: 100;
+    }
+    
+    .map-room.edge-highlight-top::before {
+      top: 0; left: 0; right: 0; height: 4px;
+    }
+    .map-room.edge-highlight-right::before {
+      top: 0; right: 0; bottom: 0; width: 4px;
+    }
+    .map-room.edge-highlight-bottom::before {
+      bottom: 0; left: 0; right: 0; height: 4px;
+    }
+    .map-room.edge-highlight-left::before {
+      top: 0; left: 0; bottom: 0; width: 4px;
+    }
+    
     .map-room.toilet { background:#d0e7ff; border-color:#5a9fd4; color:#2b5f85; }
     .map-room.toilet:hover { border-color:#3a7fb4; }
     .map-room.toilet.selected { background:#b8d9ff; border-color:#2b5f85; }
@@ -2080,7 +2112,9 @@
     let snapToGrid = true;
     const GRID_SIZE = 20;
     const SNAP_THRESHOLD = 15; // px snap distance for elements
-    // mapData: { [id]: { id, type, x, y, w, h, shapes: [{offsetX, offsetY, w, h}], rotation, label, linkToId } }
+    const EDGE_DETECTION_THRESHOLD = 8; // px for detecting edge hover
+    let hoveredEdge = null; // { elementId, edge: 'top'|'right'|'bottom'|'left' }
+    // mapData: { [id]: { id, type, x, y, w, h, shapes: [{offsetX, offsetY, w, h}], rotation, label, linkToId, attachedTo } }
     let mapData = {};
 
     const mapCanvas      = $('mapCanvas');
@@ -2163,6 +2197,14 @@
         btn.classList.add('active');
         if (activeTool === 'select') {
           mapOuter.style.cursor = 'grab';
+        } else if (activeTool === 'door') {
+          mapOuter.style.cursor = 'crosshair';
+          // Show hint for door placement
+          const hint = document.createElement('div');
+          hint.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#1a56db;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:1000;box-shadow:0 4px 12px rgba(26,86,219,0.3);';
+          hint.textContent = '🚪 Sınıf, koridor veya ofis kenarlarına tıklayarak kapı ekleyin';
+          document.body.appendChild(hint);
+          setTimeout(() => hint.remove(), 3000);
         } else {
           mapOuter.style.cursor = 'crosshair';
         }
@@ -2172,7 +2214,6 @@
     // Canvas click to place element
     mapCanvas.addEventListener('click', e => {
       if (activeTool === 'select' || !activeTool) return;
-      if (e.target !== mapCanvas) return; // Only place on empty canvas
       
       // Check if campus and block are selected
       const campusId = $('mapCampusFilter').value;
@@ -2182,6 +2223,24 @@
         alert('⚠️ Lütfen önce Kampüs ve Blok seçin!');
         return;
       }
+      
+      // Special handling for door tool
+      if (activeTool === 'door') {
+        // Check if clicking on an edge
+        if (hoveredEdge) {
+          placeDoorOnEdge(hoveredEdge.elementId, hoveredEdge.edge);
+          
+          // Don't switch back to select tool for doors - allow placing multiple doors
+          return;
+        } else {
+          // No edge detected - show hint
+          alert('🚪 Kapı eklemek için bir sınıf, koridor veya ofis kenarına tıklayın!');
+          return;
+        }
+      }
+      
+      // Normal element placement (non-door)
+      if (e.target !== mapCanvas) return; // Only place on empty canvas
       
       const rect = mapCanvas.getBoundingClientRect();
       const x = (e.clientX - rect.left - mapOffsetX) / mapScale;
@@ -2195,6 +2254,140 @@
       document.querySelector('.tool-btn[data-type="select"]').classList.add('active');
       mapOuter.style.cursor = 'grab';
     });
+    
+    // Mouse move for edge detection (door placement)
+    mapCanvas.addEventListener('mousemove', e => {
+      if (activeTool !== 'door') {
+        // Clear any edge highlights
+        if (hoveredEdge) {
+          const prevEl = mapCanvas.querySelector(`[data-id="${hoveredEdge.elementId}"]`);
+          if (prevEl) {
+            prevEl.classList.remove('edge-highlight-top', 'edge-highlight-right', 'edge-highlight-bottom', 'edge-highlight-left');
+          }
+          hoveredEdge = null;
+        }
+        return;
+      }
+      
+      const rect = mapCanvas.getBoundingClientRect();
+      const mouseX = (e.clientX - rect.left - mapOffsetX) / mapScale;
+      const mouseY = (e.clientY - rect.top - mapOffsetY) / mapScale;
+      
+      // Find which element and edge the mouse is near
+      let newHoveredEdge = null;
+      
+      Object.entries(mapData).forEach(([id, element]) => {
+        // Skip doors themselves
+        if (element.type === 'door') return;
+        
+        const ex = element.x;
+        const ey = element.y;
+        const ew = element.w;
+        const eh = element.h;
+        
+        // Check if mouse is within the element bounds (with some margin)
+        if (mouseX >= ex - EDGE_DETECTION_THRESHOLD && mouseX <= ex + ew + EDGE_DETECTION_THRESHOLD &&
+            mouseY >= ey - EDGE_DETECTION_THRESHOLD && mouseY <= ey + eh + EDGE_DETECTION_THRESHOLD) {
+          
+          // Determine which edge is closest
+          const distTop = Math.abs(mouseY - ey);
+          const distRight = Math.abs(mouseX - (ex + ew));
+          const distBottom = Math.abs(mouseY - (ey + eh));
+          const distLeft = Math.abs(mouseX - ex);
+          
+          const minDist = Math.min(distTop, distRight, distBottom, distLeft);
+          
+          if (minDist <= EDGE_DETECTION_THRESHOLD) {
+            let edge = 'top';
+            if (minDist === distRight) edge = 'right';
+            else if (minDist === distBottom) edge = 'bottom';
+            else if (minDist === distLeft) edge = 'left';
+            
+            newHoveredEdge = { elementId: id, edge };
+          }
+        }
+      });
+      
+      // Update highlights
+      if (hoveredEdge) {
+        const prevEl = mapCanvas.querySelector(`[data-id="${hoveredEdge.elementId}"]`);
+        if (prevEl) {
+          prevEl.classList.remove('edge-highlight-top', 'edge-highlight-right', 'edge-highlight-bottom', 'edge-highlight-left');
+        }
+      }
+      
+      if (newHoveredEdge) {
+        const newEl = mapCanvas.querySelector(`[data-id="${newHoveredEdge.elementId}"]`);
+        if (newEl) {
+          newEl.classList.add(`edge-highlight-${newHoveredEdge.edge}`);
+        }
+      }
+      
+      hoveredEdge = newHoveredEdge;
+    });
+    
+    // Place door on specific edge of an element
+    function placeDoorOnEdge(parentElementId, edge) {
+      const parent = mapData[parentElementId];
+      if (!parent) return;
+      
+      const tempId = 'temp_' + (tempIdCounter++);
+      const campusId = $('mapCampusFilter').value;
+      const blockId = $('mapBlockFilter').value;
+      const floor = $('mapFloorSelect').value;
+      
+      // Calculate door position and size based on edge
+      let doorX, doorY, doorW, doorH, rotation;
+      const doorThickness = 6;
+      const doorLength = 40;
+      
+      if (edge === 'top') {
+        doorX = parent.x + parent.w / 2 - doorLength / 2;
+        doorY = parent.y - doorThickness / 2;
+        doorW = doorLength;
+        doorH = doorThickness;
+        rotation = 0;
+      } else if (edge === 'right') {
+        doorX = parent.x + parent.w - doorThickness / 2;
+        doorY = parent.y + parent.h / 2 - doorLength / 2;
+        doorW = doorThickness;
+        doorH = doorLength;
+        rotation = 90;
+      } else if (edge === 'bottom') {
+        doorX = parent.x + parent.w / 2 - doorLength / 2;
+        doorY = parent.y + parent.h - doorThickness / 2;
+        doorW = doorLength;
+        doorH = doorThickness;
+        rotation = 0;
+      } else { // left
+        doorX = parent.x - doorThickness / 2;
+        doorY = parent.y + parent.h / 2 - doorLength / 2;
+        doorW = doorThickness;
+        doorH = doorLength;
+        rotation = 90;
+      }
+      
+      mapData[tempId] = {
+        id: tempId,
+        type: 'door',
+        x: doorX,
+        y: doorY,
+        w: doorW,
+        h: doorH,
+        shapes: [],
+        rotation,
+        label: 'KAPI',
+        campusId,
+        blockId,
+        floor,
+        attachedTo: parentElementId,
+        attachedEdge: edge,
+        isNew: true
+      };
+      
+      renderMapPanel();
+      selectRoom(tempId);
+    }
 
     // ── Render map panel ──
     function getFilteredClassrooms() {
@@ -2431,28 +2624,42 @@
         el.style.height = d.h + 'px';
         if (rotationTransform) el.style.transform = rotationTransform;
         
-        // Content based on type
-        let content = '';
-        if (type === 'classroom' && c) {
-          content = `
-            <span class="room-code">${escapeHtml(c.code || c.id)}</span>
-            ${c.capacity ? `<span class="room-cap">${c.capacity} kişi</span>` : ''}
-          `;
+        // Special rendering for doors
+        if (type === 'door') {
+          // Door as a line/bar with label
+          el.style.display = 'flex';
+          el.style.alignItems = 'center';
+          el.style.justifyContent = 'center';
+          el.style.borderRadius = '2px';
+          el.innerHTML = `<span class="room-code">${escapeHtml(d.label || 'KAPI')}</span>`;
+          // No resize handle for doors
         } else {
-          const typeInfo = ELEMENT_TYPES[type] || {};
-          content = `
-            <span class="room-code">${typeInfo.icon || ''}${escapeHtml(d.label || typeInfo.label || '')}</span>
-          `;
+          // Content based on type
+          let content = '';
+          if (type === 'classroom' && c) {
+            content = `
+              <span class="room-code">${escapeHtml(c.code || c.id)}</span>
+              ${c.capacity ? `<span class="room-cap">${c.capacity} kişi</span>` : ''}
+            `;
+          } else {
+            const typeInfo = ELEMENT_TYPES[type] || {};
+            content = `
+              <span class="room-code">${typeInfo.icon || ''}${escapeHtml(d.label || typeInfo.label || '')}</span>
+            `;
+          }
+          
+          el.innerHTML = content + '<div class="resize-handle"></div>';
         }
-        
-        el.innerHTML = content + '<div class="resize-handle"></div>';
       }
       
       makeDraggable(el, id);
-      if (!d.shapes || d.shapes.length === 0) {
-        makeResizable(el, id);
-      } else {
-        makeShapeResizable(el, id);
+      // Doors should not be resizable
+      if (type !== 'door') {
+        if (!d.shapes || d.shapes.length === 0) {
+          makeResizable(el, id);
+        } else {
+          makeShapeResizable(el, id);
+        }
       }
       el.addEventListener('click', e => { if (!e._wasDragged) selectRoom(id); });
       mapCanvas.appendChild(el);
@@ -2482,6 +2689,18 @@
           <div class="info-row"><span>Tür:</span><strong>${escapeHtml(typeInfo.label || d.type)}</strong></div>
           <div class="info-row"><span>Etiket:</span><strong>${escapeHtml(d.label || '—')}</strong></div>
         `;
+        
+        // Show door attachment info
+        if (d.type === 'door' && d.attachedTo) {
+          const attachedElement = mapData[d.attachedTo];
+          const attachedClassroom = classrooms.find(c => c.id === d.attachedTo);
+          const attachedName = attachedClassroom ? attachedClassroom.code : (attachedElement?.label || d.attachedTo);
+          const edgeNames = { top: 'Üst', right: 'Sağ', bottom: 'Alt', left: 'Sol' };
+          infoHTML += `
+            <div class="info-row"><span>Bağlı:</span><strong>${escapeHtml(attachedName)}</strong></div>
+            <div class="info-row"><span>Kenar:</span><strong>${edgeNames[d.attachedEdge] || d.attachedEdge}</strong></div>
+          `;
+        }
       }
       infoHTML += `<div class="info-row"><span>Konum:</span><strong>${Math.round(d.x)}, ${Math.round(d.y)}</strong></div>`;
       
@@ -2489,12 +2708,23 @@
       $('mapRoomW').value = Math.round(d.w);
       $('mapRoomH').value = Math.round(d.h);
       
+      // Hide dimension controls for doors (fixed size)
+      const showDimensions = d.type !== 'door';
+      $('mapRoomW').parentElement.parentElement.style.display = showDimensions ? 'grid' : 'none';
+      $('mapApplyDim').style.display = showDimensions ? 'block' : 'none';
+      
       // Show/hide rotation controls for door and other rotatable types
       const showRotation = ['door', 'corridor'].includes(d.type);
       $('mapRotationSection').style.display = showRotation ? 'block' : 'none';
       
+      // Hide shape editor for doors
+      const showShapeEditor = d.type !== 'door';
+      $('mapShapeSection').style.display = showShapeEditor ? 'block' : 'none';
+      
       // Render shape editor
-      renderShapeEditor(id);
+      if (showShapeEditor) {
+        renderShapeEditor(id);
+      }
     }
 
     function renderShapeEditor(id) {
