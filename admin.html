@@ -290,8 +290,8 @@
     }
     .map-canvas-outer {
       position:relative; overflow:hidden;
-      background: repeating-linear-gradient(0deg,transparent,transparent 39px,#e8eaef 39px,#e8eaef 40px),
-                  repeating-linear-gradient(90deg,transparent,transparent 39px,#e8eaef 39px,#e8eaef 40px);
+      background: repeating-linear-gradient(0deg,transparent,transparent 19px,#e8eaef 19px,#e8eaef 20px),
+                  repeating-linear-gradient(90deg,transparent,transparent 19px,#e8eaef 19px,#e8eaef 20px);
       background-color:#f0f2f7;
       cursor:grab;
     }
@@ -861,7 +861,7 @@
               <div id="mapCanvas" style="width:1200px;height:900px;position:relative"></div>
             </div>
             <div class="map-hint">
-              Sınıfı sürükle konumlandır · Sağ alt köşeden boyutlandır · Kaydır/yaklaştır için scroll
+              🎯 Elementler otomatik hizalanır · 🚪 Kapılar yapılara yapışır · ⇧ Shift: serbest hareket · Scroll: zoom
             </div>
           </div>
 
@@ -2077,6 +2077,9 @@
     let mapSelectedId = null;
     let activeTool = 'select';
     let tempIdCounter = 0;
+    let snapToGrid = true;
+    const GRID_SIZE = 20;
+    const SNAP_THRESHOLD = 15; // px snap distance for elements
     // mapData: { [id]: { id, type, x, y, w, h, shapes: [{offsetX, offsetY, w, h}], rotation, label, linkToId } }
     let mapData = {};
 
@@ -2170,6 +2173,15 @@
     mapCanvas.addEventListener('click', e => {
       if (activeTool === 'select' || !activeTool) return;
       if (e.target !== mapCanvas) return; // Only place on empty canvas
+      
+      // Check if campus and block are selected
+      const campusId = $('mapCampusFilter').value;
+      const blockId = $('mapBlockFilter').value;
+      
+      if (!campusId || !blockId) {
+        alert('⚠️ Lütfen önce Kampüs ve Blok seçin!');
+        return;
+      }
       
       const rect = mapCanvas.getBoundingClientRect();
       const x = (e.clientX - rect.left - mapOffsetX) / mapScale;
@@ -2272,21 +2284,79 @@
       const defaults = ELEMENT_TYPES[type] || ELEMENT_TYPES.classroom;
       const tempId = 'temp_' + (tempIdCounter++);
       
+      // Get current filter context
+      const campusId = $('mapCampusFilter').value;
+      const blockId = $('mapBlockFilter').value;
+      const floor = $('mapFloorSelect').value;
+      
+      // Apply snap-to-grid
+      let x = position.x;
+      let y = position.y;
+      if (snapToGrid) {
+        x = Math.round(x / GRID_SIZE) * GRID_SIZE;
+        y = Math.round(y / GRID_SIZE) * GRID_SIZE;
+      }
+      
+      // Special handling for doors - snap to nearest structure edge
+      if (type === 'door') {
+        const snapped = snapDoorToStructure(x, y, defaults.defaultW, defaults.defaultH);
+        if (snapped) {
+          x = snapped.x;
+          y = snapped.y;
+        }
+      }
+      
       mapData[tempId] = {
         id: tempId,
         type,
-        x: position.x,
-        y: position.y,
+        x,
+        y,
         w: defaults.defaultW,
         h: defaults.defaultH,
         shapes: [],
         rotation: 0,
         label: defaults.label,
+        campusId,
+        blockId,
+        floor,
         isNew: true
       };
       
       renderMapPanel();
       selectRoom(tempId);
+    }
+    
+    // Snap door to nearest structure (classroom/corridor/office) edge
+    function snapDoorToStructure(x, y, w, h) {
+      let bestSnap = null;
+      let minDist = SNAP_THRESHOLD * 2;
+      
+      Object.values(mapData).forEach(element => {
+        if (!element.type || element.type === 'door') return;
+        
+        const ex = element.x;
+        const ey = element.y;
+        const ew = element.w;
+        const eh = element.h;
+        
+        // Check 4 edges: top, right, bottom, left
+        const edges = [
+          { x: ex + ew/2 - w/2, y: ey - h, side: 'top' },      // Top edge (door outside)
+          { x: ex + ew, y: ey + eh/2 - h/2, side: 'right' },   // Right edge
+          { x: ex + ew/2 - w/2, y: ey + eh, side: 'bottom' }, // Bottom edge
+          { x: ex - w, y: ey + eh/2 - h/2, side: 'left' }     // Left edge
+        ];
+        
+        edges.forEach(edge => {
+          const dist = Math.sqrt(Math.pow(edge.x - x, 2) + Math.pow(edge.y - y, 2));
+          if (dist < minDist) {
+            minDist = dist;
+            bestSnap = edge;
+          }
+        });
+      });
+      
+      return bestSnap;
     }
 
     function renderRoomEl(c) {
@@ -2535,13 +2605,30 @@
           const dx=(ev.clientX-startX)/mapScale;
           const dy=(ev.clientY-startY)/mapScale;
           if (Math.abs(dx)+Math.abs(dy)>3) dragged=true;
-          mapData[id].x = Math.max(0, startL+dx);
-          mapData[id].y = Math.max(0, startT+dy);
+          
+          let newX = Math.max(0, startL+dx);
+          let newY = Math.max(0, startT+dy);
+          
+          // Apply snap-to-grid if enabled (hold Shift to disable temporarily)
+          if (snapToGrid && !ev.shiftKey) {
+            newX = Math.round(newX / GRID_SIZE) * GRID_SIZE;
+            newY = Math.round(newY / GRID_SIZE) * GRID_SIZE;
+          }
+          
+          // Snap to nearby elements
+          const snapped = snapToNearbyElements(id, newX, newY, mapData[id].w, mapData[id].h, ev.shiftKey);
+          newX = snapped.x;
+          newY = snapped.y;
+          
+          mapData[id].x = newX;
+          mapData[id].y = newY;
           el.style.left = mapData[id].x+'px';
           el.style.top  = mapData[id].y+'px';
           if (mapSelectedId===id) {
-            $('mapSelectedInfo').querySelector('.info-row:last-child strong').textContent =
-              `${Math.round(mapData[id].x)}, ${Math.round(mapData[id].y)}`;
+            const infoRow = $('mapSelectedInfo').querySelector('.info-row:last-child strong');
+            if (infoRow) {
+              infoRow.textContent = `${Math.round(mapData[id].x)}, ${Math.round(mapData[id].y)}`;
+            }
           }
         };
         const onUp = ev => {
@@ -2553,6 +2640,85 @@
         window.addEventListener('mousemove', onMove);
         window.addEventListener('mouseup', onUp);
       });
+    }
+    
+    // Snap element to nearby elements (edge alignment)
+    function snapToNearbyElements(currentId, x, y, w, h, shiftPressed) {
+      if (shiftPressed) return { x, y }; // Shift disables snapping
+      
+      let snappedX = x;
+      let snappedY = y;
+      let minXDist = SNAP_THRESHOLD;
+      let minYDist = SNAP_THRESHOLD;
+      
+      Object.entries(mapData).forEach(([otherId, other]) => {
+        if (otherId === currentId) return;
+        
+        const ox = other.x;
+        const oy = other.y;
+        const ow = other.w;
+        const oh = other.h;
+        
+        // Horizontal alignment checks
+        // Left edge to left edge
+        const leftDist = Math.abs(x - ox);
+        if (leftDist < minXDist) {
+          snappedX = ox;
+          minXDist = leftDist;
+        }
+        
+        // Right edge to right edge
+        const rightDist = Math.abs((x + w) - (ox + ow));
+        if (rightDist < minXDist) {
+          snappedX = ox + ow - w;
+          minXDist = rightDist;
+        }
+        
+        // Left edge to right edge (side by side)
+        const leftToRightDist = Math.abs(x - (ox + ow));
+        if (leftToRightDist < minXDist) {
+          snappedX = ox + ow;
+          minXDist = leftToRightDist;
+        }
+        
+        // Right edge to left edge
+        const rightToLeftDist = Math.abs((x + w) - ox);
+        if (rightToLeftDist < minXDist) {
+          snappedX = ox - w;
+          minXDist = rightToLeftDist;
+        }
+        
+        // Vertical alignment checks
+        // Top edge to top edge
+        const topDist = Math.abs(y - oy);
+        if (topDist < minYDist) {
+          snappedY = oy;
+          minYDist = topDist;
+        }
+        
+        // Bottom edge to bottom edge
+        const bottomDist = Math.abs((y + h) - (oy + oh));
+        if (bottomDist < minYDist) {
+          snappedY = oy + oh - h;
+          minYDist = bottomDist;
+        }
+        
+        // Top edge to bottom edge (stacked)
+        const topToBottomDist = Math.abs(y - (oy + oh));
+        if (topToBottomDist < minYDist) {
+          snappedY = oy + oh;
+          minYDist = topToBottomDist;
+        }
+        
+        // Bottom edge to top edge
+        const bottomToTopDist = Math.abs((y + h) - oy);
+        if (bottomToTopDist < minYDist) {
+          snappedY = oy - h;
+          minYDist = bottomToTopDist;
+        }
+      });
+      
+      return { x: snappedX, y: snappedY };
     }
 
     // ── Resize ──
@@ -2622,13 +2788,49 @@
       try {
         const batch = writeBatch(db);
         let saveCount = 0;
+        let newCount = 0;
         
+        // First, create new elements (temp_ IDs) in Firestore
+        const tempElements = Object.entries(mapData).filter(([id]) => id.startsWith('temp_'));
+        
+        for (const [tempId, pos] of tempElements) {
+          const newDocData = {
+            code: pos.label || pos.type,
+            elementType: pos.type || 'classroom',
+            campusId: pos.campusId || '',
+            blockId: pos.blockId || '',
+            floor: pos.floor || '',
+            active: true,
+            mapX: pos.x,
+            mapY: pos.y,
+            mapW: pos.w,
+            mapH: pos.h,
+            shapes: pos.shapes || [],
+            rotation: pos.rotation || 0,
+            label: pos.label || '',
+            capacity: 0,
+            images: [],
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          };
+          
+          // Create new document
+          const newDocRef = await addDoc(collection(db, 'classrooms'), newDocData);
+          
+          // Update mapData with real ID
+          delete mapData[tempId];
+          mapData[newDocRef.id] = {
+            ...pos,
+            id: newDocRef.id,
+            isNew: false
+          };
+          
+          newCount++;
+        }
+        
+        // Then update existing elements
         Object.entries(mapData).forEach(([id, pos]) => {
-          // Skip temp IDs (new elements not yet saved to Firestore)
-          if (id.startsWith('temp_')) {
-            console.warn('Skipping temp element:', id, '- needs to be saved as a classroom first');
-            return;
-          }
+          if (id.startsWith('temp_')) return; // Already handled above
           
           const payload = {
             mapX: pos.x, 
@@ -2649,20 +2851,33 @@
           if (pos.label) {
             payload.label = pos.label;
           }
+          if (pos.campusId) {
+            payload.campusId = pos.campusId;
+          }
+          if (pos.blockId) {
+            payload.blockId = pos.blockId;
+          }
+          if (pos.floor) {
+            payload.floor = pos.floor;
+          }
           
           batch.update(doc(db, 'classrooms', id), payload);
           saveCount++;
         });
         
-        if (saveCount === 0) {
-          alert('Kaydedilecek eleman yok. Yeni eklenen elementler için önce sınıf olarak kaydedin.');
-          btn.disabled=false; btn.textContent=old;
-          return;
+        if (batch._mutations && batch._mutations.length > 0) {
+          await batch.commit();
         }
         
-        await batch.commit();
-        btn.textContent='✓ Kaydedildi (' + saveCount + ')'; btn.style.background='var(--success)';
-        setTimeout(()=>{ btn.textContent=old; btn.style.background=''; btn.disabled=false; },2200);
+        // Reload data to reflect changes
+        if (newCount > 0) {
+          await loadAll();
+          renderMapPanel();
+        }
+        
+        btn.textContent=`✓ Kaydedildi (${saveCount} güncellendi, ${newCount} yeni)`; 
+        btn.style.background='var(--success)';
+        setTimeout(()=>{ btn.textContent=old; btn.style.background=''; btn.disabled=false; },2500);
       } catch(e) {
         console.error(e);
         alert('Kayıt hatası: '+e.message);
