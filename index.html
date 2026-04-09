@@ -671,9 +671,16 @@
         img.src = imageUrl;
       });
 
-      // Canvas'ı görselin orijinal boyutuna ayarla
-      const outputWidth = img.naturalWidth;
-      const outputHeight = img.naturalHeight;
+      // Maksimum boyut sınırı: 1280x720 (HD)
+      const maxWidth = 1280;
+      const maxHeight = 720;
+      const imgWidth = img.naturalWidth;
+      const imgHeight = img.naturalHeight;
+      
+      // Oranı koruyarak boyutu hesapla
+      const scale = Math.min(1, Math.min(maxWidth / imgWidth, maxHeight / imgHeight));
+      const outputWidth = Math.round(imgWidth * scale);
+      const outputHeight = Math.round(imgHeight * scale);
       const overlayHeight = Math.round(outputHeight * 0.19);
 
       const canvas = document.createElement('canvas');
