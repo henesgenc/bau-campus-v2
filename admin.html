@@ -333,6 +333,94 @@
     }
     .map-room.selected .resize-handle { background: linear-gradient(135deg, transparent 50%, #1a56db 50%); }
 
+    /* ── Element Type Themes ── */
+    .map-room.classroom { background:#e8effe; border-color:#9db7f5; color:#1a56db; }
+    .map-room.classroom:hover { border-color:#1a56db; }
+    .map-room.classroom.selected { background:#dbeaff; border-color:#1a56db; }
+    
+    .map-room.corridor { background:#e5e5e5; border-color:#a0a0a0; color:#5a5a5a; }
+    .map-room.corridor:hover { border-color:#707070; }
+    .map-room.corridor.selected { background:#d0d0d0; border-color:#505050; }
+    
+    .map-room.door { background:#d4a574; border-color:#8b6f47; color:#5a4a2f; }
+    .map-room.door:hover { border-color:#6b5537; }
+    .map-room.door.selected { background:#c89060; border-color:#5a4a2f; }
+    
+    .map-room.toilet { background:#d0e7ff; border-color:#5a9fd4; color:#2b5f85; }
+    .map-room.toilet:hover { border-color:#3a7fb4; }
+    .map-room.toilet.selected { background:#b8d9ff; border-color:#2b5f85; }
+    
+    .map-room.office { background:#fff3cd; border-color:#ffca28; color:#8b6914; }
+    .map-room.office:hover { border-color:#e0a800; }
+    .map-room.office.selected { background:#ffe4a0; border-color:#8b6914; }
+    
+    .map-room.stairs { background:#e8d8ff; border-color:#9f7aea; color:#5a2f85; }
+    .map-room.stairs:hover { border-color:#7f5aca; }
+    .map-room.stairs.selected { background:#d8c8ff; border-color:#5a2f85; }
+    
+    .map-room.elevator { background:#b8e8d8; border-color:#4a9f7a; color:#2f5a45; }
+    .map-room.elevator:hover { border-color:#3a7f5a; }
+    .map-room.elevator.selected { background:#a0d8c8; border-color:#2f5a45; }
+    
+    .map-room.cafeteria { background:#ffe4e1; border-color:#ff6b6b; color:#8b2f2f; }
+    .map-room.cafeteria:hover { border-color:#ff4b4b; }
+    .map-room.cafeteria.selected { background:#ffd0cd; border-color:#8b2f2f; }
+    
+    .map-room.library { background:#e1f0ff; border-color:#6b9fff; color:#2f5f8b; }
+    .map-room.library:hover { border-color:#4b7fff; }
+    .map-room.library.selected { background:#c8e0ff; border-color:#2f5f8b; }
+    
+    .map-room.lab { background:#e8ffe1; border-color:#6bff9f; color:#2f8b5a; }
+    .map-room.lab:hover { border-color:#4bff7f; }
+    .map-room.lab.selected { background:#d0ffc8; border-color:#2f8b5a; }
+    
+    .map-room.storage { background:#f5f5dc; border-color:#c8c8a0; color:#5a5a45; }
+    .map-room.storage:hover { border-color:#a8a880; }
+    .map-room.storage.selected { background:#e5e5cc; border-color:#5a5a45; }
+
+    /* ── Tool Palette ── */
+    .map-tool-palette {
+      display:grid; grid-template-columns:repeat(2, 1fr); gap:6px;
+    }
+    .tool-btn {
+      display:flex; align-items:center; gap:6px;
+      padding:8px 10px; border-radius:9px; background:#f7f8fb;
+      border:1px solid var(--border); font-size:12px; font-weight:600;
+      cursor:pointer; transition:all .12s; text-align:left;
+      color:var(--text);
+    }
+    .tool-btn:hover { background:var(--primary-soft); border-color:#9db7f5; }
+    .tool-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); box-shadow:0 2px 6px rgba(26,86,219,.25); }
+    .tool-btn .tool-icon { font-size:16px; }
+
+    /* ── Shape Editor ── */
+    .shape-list { display:flex; flex-direction:column; gap:6px; margin-top:10px; max-height:200px; overflow-y:auto; }
+    .shape-item {
+      display:grid; grid-template-columns:repeat(4, 1fr) auto; gap:4px; align-items:center;
+      padding:6px 8px; background:#f7f8fb; border:1px solid var(--border); border-radius:8px;
+      font-size:11px;
+    }
+    .shape-item input {
+      width:100%; padding:4px 6px; font-size:11px; border:1px solid #d0d7e3; border-radius:6px;
+      background:#fff; outline:none;
+    }
+    .shape-item input:focus { border-color:var(--primary); }
+    .shape-item button {
+      padding:4px 8px; font-size:10px; border:none; border-radius:6px;
+      background:var(--danger-soft); color:var(--danger); cursor:pointer; font-weight:700;
+    }
+
+    /* ── Rotation Control ── */
+    .rotation-controls {
+      display:flex; gap:6px; margin-top:10px;
+    }
+    .rotation-btn {
+      flex:1; padding:8px; border:1px solid var(--border); border-radius:8px;
+      background:#f7f8fb; cursor:pointer; font-size:16px; font-weight:700;
+      transition:background .12s, border-color .12s;
+    }
+    .rotation-btn:hover { background:var(--primary-soft); border-color:#9db7f5; }
+
     .map-unplaced-list {
       display:flex; flex-direction:column; gap:6px;
       max-height:380px; overflow-y:auto;
@@ -582,6 +670,61 @@
           <!-- LEFT SIDEBAR -->
           <div class="map-sidebar">
 
+            <!-- Tool Palette -->
+            <div class="map-sidebar-card">
+              <h3>Araçlar</h3>
+              <div class="map-tool-palette">
+                <button class="tool-btn active" data-type="select" title="Seç">
+                  <span class="tool-icon">➤</span>
+                  <span>Seç</span>
+                </button>
+                <button class="tool-btn" data-type="classroom" title="Sınıf">
+                  <span class="tool-icon">🪑</span>
+                  <span>Sınıf</span>
+                </button>
+                <button class="tool-btn" data-type="corridor" title="Koridor">
+                  <span class="tool-icon">🛤</span>
+                  <span>Koridor</span>
+                </button>
+                <button class="tool-btn" data-type="door" title="Kapı">
+                  <span class="tool-icon">🚪</span>
+                  <span>Kapı</span>
+                </button>
+                <button class="tool-btn" data-type="toilet" title="WC">
+                  <span class="tool-icon">🚺</span>
+                  <span>WC</span>
+                </button>
+                <button class="tool-btn" data-type="office" title="Ofis">
+                  <span class="tool-icon">💼</span>
+                  <span>Ofis</span>
+                </button>
+                <button class="tool-btn" data-type="stairs" title="Merdiven">
+                  <span class="tool-icon">🪧</span>
+                  <span>Merdiven</span>
+                </button>
+                <button class="tool-btn" data-type="elevator" title="Asansör">
+                  <span class="tool-icon">🛗</span>
+                  <span>Asansör</span>
+                </button>
+                <button class="tool-btn" data-type="cafeteria" title="Kafeterya">
+                  <span class="tool-icon">☕</span>
+                  <span>Kafeterya</span>
+                </button>
+                <button class="tool-btn" data-type="library" title="Kütüphane">
+                  <span class="tool-icon">📚</span>
+                  <span>Kütüphane</span>
+                </button>
+                <button class="tool-btn" data-type="lab" title="Laboratuvar">
+                  <span class="tool-icon">🧪</span>
+                  <span>Lab</span>
+                </button>
+                <button class="tool-btn" data-type="storage" title="Depo">
+                  <span class="tool-icon">📦</span>
+                  <span>Depo</span>
+                </button>
+              </div>
+            </div>
+
             <!-- Filter -->
             <div class="map-sidebar-card">
               <h3>Filtrele</h3>
@@ -605,8 +748,10 @@
 
             <!-- Selected room info -->
             <div class="map-sidebar-card" id="mapInfoCard" style="display:none">
-              <h3>Seçili Sınıf</h3>
+              <h3>Seçili Element</h3>
               <div id="mapSelectedInfo" class="map-selected-info"></div>
+              
+              <!-- Base Dimensions -->
               <div class="map-dim-inputs">
                 <div>
                   <label>Genişlik (px)</label>
@@ -618,20 +763,77 @@
                 </div>
               </div>
               <button id="mapApplyDim" class="btn btn-secondary" style="width:100%;margin-top:8px">Boyutu Uygula</button>
-              <button id="mapRemoveBtn" class="btn">🗑 Haritadan Kaldır</button>
+              
+              <!-- Rotation Control -->
+              <div id="mapRotationSection" style="display:none">
+                <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:10px 0 6px 0;display:block">— Döndürme —</label>
+                <div class="rotation-controls">
+                  <button id="mapRotateLeft" class="rotation-btn" title="90° sola">↻</button>
+                  <button id="mapRotateRight" class="rotation-btn" title="90° sağa">↺</button>
+                </div>
+              </div>
+              
+              <!-- Shape Editor -->
+              <div id="mapShapeSection" style="margin-top:12px">
+                <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:6px;display:block">— Şekiller (Çoklu Dikdörtgen) —</label>
+                <div id="mapShapeList" class="shape-list"></div>
+                <button id="mapAddShape" class="btn btn-ghost" style="width:100%;margin-top:6px;font-size:11px">＋ Dikdörtgen Ekle</button>
+              </div>
+              
+              <button id="mapRemoveBtn" class="btn" style="margin-top:12px">🗑 Haritadan Kaldır</button>
             </div>
 
             <!-- Legend -->
             <div class="map-sidebar-card">
               <h3>Gösterge</h3>
-              <div class="map-legend">
+              <div class="map-legend" style="max-height:280px;overflow-y:auto">
                 <div class="map-legend-row">
                   <div class="map-legend-dot" style="background:#e8effe;border-color:#9db7f5"></div>
-                  Aktif Sınıf
+                  Sınıf
                 </div>
                 <div class="map-legend-row">
+                  <div class="map-legend-dot" style="background:#e5e5e5;border-color:#a0a0a0"></div>
+                  Koridor
+                </div>
+                <div class="map-legend-row">
+                  <div class="map-legend-dot" style="background:#d4a574;border-color:#8b6f47"></div>
+                  Kapı
+                </div>
+                <div class="map-legend-row">
+                  <div class="map-legend-dot" style="background:#d0e7ff;border-color:#5a9fd4"></div>
+                  WC
+                </div>
+                <div class="map-legend-row">
+                  <div class="map-legend-dot" style="background:#fff3cd;border-color:#ffca28"></div>
+                  Ofis
+                </div>
+                <div class="map-legend-row">
+                  <div class="map-legend-dot" style="background:#e8d8ff;border-color:#9f7aea"></div>
+                  Merdiven
+                </div>
+                <div class="map-legend-row">
+                  <div class="map-legend-dot" style="background:#b8e8d8;border-color:#4a9f7a"></div>
+                  Asansör
+                </div>
+                <div class="map-legend-row">
+                  <div class="map-legend-dot" style="background:#ffe4e1;border-color:#ff6b6b"></div>
+                  Kafeterya
+                </div>
+                <div class="map-legend-row">
+                  <div class="map-legend-dot" style="background:#e1f0ff;border-color:#6b9fff"></div>
+                  Kütüphane
+                </div>
+                <div class="map-legend-row">
+                  <div class="map-legend-dot" style="background:#e8ffe1;border-color:#6bff9f"></div>
+                  Lab
+                </div>
+                <div class="map-legend-row">
+                  <div class="map-legend-dot" style="background:#f5f5dc;border-color:#c8c8a0"></div>
+                  Depo
+                </div>
+                <div class="map-legend-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
                   <div class="map-legend-dot" style="background:#f5f5f5;border-color:#c8c8c8"></div>
-                  Pasif Sınıf
+                  Pasif
                 </div>
                 <div class="map-legend-row">
                   <div class="map-legend-dot" style="background:#dbeaff;border-color:#1a56db"></div>
@@ -1854,10 +2056,28 @@
     });
 
     // ── MAP PANEL ──────────────────────────────────────────────────
+    
+    // Element Type Definitions
+    const ELEMENT_TYPES = {
+      classroom: { icon: '🪑', label: 'Sınıf', defaultW: 80, defaultH: 56 },
+      corridor: { icon: '🛤', label: 'Koridor', defaultW: 120, defaultH: 40 },
+      door: { icon: '🚪', label: 'Kapı', defaultW: 30, defaultH: 20 },
+      toilet: { icon: '🚺', label: 'WC', defaultW: 50, defaultH: 50 },
+      office: { icon: '💼', label: 'Ofis', defaultW: 70, defaultH: 60 },
+      stairs: { icon: '🪧', label: 'Merdiven', defaultW: 60, defaultH: 80 },
+      elevator: { icon: '🛗', label: 'Asansör', defaultW: 50, defaultH: 50 },
+      cafeteria: { icon: '☕', label: 'Kafeterya', defaultW: 100, defaultH: 80 },
+      library: { icon: '📚', label: 'Kütüphane', defaultW: 120, defaultH: 100 },
+      lab: { icon: '🧪', label: 'Lab', defaultW: 90, defaultH: 70 },
+      storage: { icon: '📦', label: 'Depo', defaultW: 60, defaultH: 60 }
+    };
+    
     let mapScale = 1;
     let mapOffsetX = 0, mapOffsetY = 0;
     let mapSelectedId = null;
-    // mapData: { [classroomId]: { x, y, w, h } }  — loaded from Firestore
+    let activeTool = 'select';
+    let tempIdCounter = 0;
+    // mapData: { [id]: { id, type, x, y, w, h, shapes: [{offsetX, offsetY, w, h}], rotation, label, linkToId } }
     let mapData = {};
 
     const mapCanvas      = $('mapCanvas');
@@ -1932,6 +2152,38 @@
 
     $('mapFloorSelect').addEventListener('change', () => renderMapPanel());
 
+    // ── Tool Palette ──
+    document.querySelectorAll('.tool-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeTool = btn.dataset.type;
+        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (activeTool === 'select') {
+          mapOuter.style.cursor = 'grab';
+        } else {
+          mapOuter.style.cursor = 'crosshair';
+        }
+      });
+    });
+
+    // Canvas click to place element
+    mapCanvas.addEventListener('click', e => {
+      if (activeTool === 'select' || !activeTool) return;
+      if (e.target !== mapCanvas) return; // Only place on empty canvas
+      
+      const rect = mapCanvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left - mapOffsetX) / mapScale;
+      const y = (e.clientY - rect.top - mapOffsetY) / mapScale;
+      
+      placeElement(activeTool, { x: Math.max(0, x), y: Math.max(0, y) });
+      
+      // Switch back to select tool
+      activeTool = 'select';
+      document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector('.tool-btn[data-type="select"]').classList.add('active');
+      mapOuter.style.cursor = 'grab';
+    });
+
     // ── Render map panel ──
     function getFilteredClassrooms() {
       const cid = $('mapCampusFilter').value;
@@ -1951,6 +2203,19 @@
       const filtered = getFilteredClassrooms();
       const placed   = filtered.filter(c => mapData[c.id]);
       const unplaced = filtered.filter(c => !mapData[c.id]);
+      
+      // Also include placed non-classroom elements
+      const placedElements = Object.values(mapData).filter(d => {
+        if (!d.type || d.type === 'classroom') {
+          return placed.some(c => c.id === d.id);
+        }
+        // For non-classroom elements, check if they match the filter
+        const cid = $('mapCampusFilter').value;
+        const bid = $('mapBlockFilter').value;
+        if (cid && d.campusId !== cid) return false;
+        if (bid && d.blockId !== bid) return false;
+        return true;
+      });
 
       // Unplaced list
       $('mapUnplacedCount').textContent = unplaced.length;
@@ -1970,36 +2235,156 @@
         });
       }
 
-      // Canvas rooms
+      // Canvas rooms and elements
       mapCanvas.innerHTML = '';
       placed.forEach(c => renderRoomEl(c));
+      
+      // Render standalone elements (non-classrooms)
+      placedElements.forEach(d => {
+        if (d.type && d.type !== 'classroom' && !classrooms.some(c => c.id === d.id)) {
+          renderMapElement(d.id, d, null);
+        }
+      });
     }
 
     function placeClassroom(id) {
       if (mapData[id]) return;
-      mapData[id] = { x: 40, y: 40, w: 80, h: 56 };
+      const c = classrooms.find(x => x.id === id);
+      if (!c) return;
+      const type = c.elementType || 'classroom';
+      const defaults = ELEMENT_TYPES[type] || ELEMENT_TYPES.classroom;
+      mapData[id] = { 
+        id, 
+        type, 
+        x: 40, 
+        y: 40, 
+        w: defaults.defaultW, 
+        h: defaults.defaultH,
+        shapes: [],
+        rotation: 0,
+        label: c.code || ''
+      };
       renderMapPanel();
       selectRoom(id);
+    }
+
+    function placeElement(type, position) {
+      const defaults = ELEMENT_TYPES[type] || ELEMENT_TYPES.classroom;
+      const tempId = 'temp_' + (tempIdCounter++);
+      
+      mapData[tempId] = {
+        id: tempId,
+        type,
+        x: position.x,
+        y: position.y,
+        w: defaults.defaultW,
+        h: defaults.defaultH,
+        shapes: [],
+        rotation: 0,
+        label: defaults.label,
+        isNew: true
+      };
+      
+      renderMapPanel();
+      selectRoom(tempId);
     }
 
     function renderRoomEl(c) {
       const d = mapData[c.id];
       if (!d) return;
+      
+      // Ensure type is set
+      if (!d.type) d.type = c.elementType || 'classroom';
+      if (d.shapes === undefined) d.shapes = [];
+      if (d.rotation === undefined) d.rotation = 0;
+      
+      renderMapElement(c.id, d, c);
+    }
+
+    function renderMapElement(id, d, c) {
       const el = document.createElement('div');
-      el.className = 'map-room' + (c.active === false ? ' inactive' : '');
-      el.dataset.id = c.id;
-      el.style.left   = d.x + 'px';
-      el.style.top    = d.y + 'px';
-      el.style.width  = d.w + 'px';
-      el.style.height = d.h + 'px';
-      el.innerHTML = `
-        <span class="room-code">${escapeHtml(c.code || c.id)}</span>
-        ${c.capacity ? `<span class="room-cap">${c.capacity} kişi</span>` : ''}
-        <div class="resize-handle"></div>
-      `;
-      makeDraggable(el, c.id);
-      makeResizable(el, c.id);
-      el.addEventListener('click', e => { if (!e._wasDragged) selectRoom(c.id); });
+      const type = d.type || 'classroom';
+      el.className = 'map-room ' + type + (c && c.active === false ? ' inactive' : '');
+      el.dataset.id = id;
+      el.dataset.type = type;
+      
+      // Apply rotation
+      const rotationTransform = d.rotation ? `rotate(${d.rotation}deg)` : '';
+      
+      // Check if element has shapes (multi-rectangle)
+      if (d.shapes && d.shapes.length > 0) {
+        // Multi-rectangle rendering
+        el.style.left = d.x + 'px';
+        el.style.top = d.y + 'px';
+        el.style.width = 'auto';
+        el.style.height = 'auto';
+        el.style.background = 'transparent';
+        el.style.border = 'none';
+        el.style.boxShadow = 'none';
+        
+        // Render each shape
+        d.shapes.forEach((shape, idx) => {
+          const shapeDiv = document.createElement('div');
+          shapeDiv.className = 'map-room ' + type;
+          shapeDiv.style.position = 'absolute';
+          shapeDiv.style.left = (shape.offsetX || 0) + 'px';
+          shapeDiv.style.top = (shape.offsetY || 0) + 'px';
+          shapeDiv.style.width = (shape.w || 40) + 'px';
+          shapeDiv.style.height = (shape.h || 30) + 'px';
+          if (rotationTransform) shapeDiv.style.transform = rotationTransform;
+          
+          // Add resize handle to each shape
+          const handle = document.createElement('div');
+          handle.className = 'resize-handle';
+          handle.dataset.shapeIndex = idx;
+          shapeDiv.appendChild(handle);
+          
+          el.appendChild(shapeDiv);
+        });
+        
+        // Add label in center
+        const labelDiv = document.createElement('div');
+        labelDiv.style.position = 'absolute';
+        labelDiv.style.left = '50%';
+        labelDiv.style.top = '50%';
+        labelDiv.style.transform = 'translate(-50%, -50%)';
+        labelDiv.style.pointerEvents = 'none';
+        labelDiv.style.zIndex = '100';
+        labelDiv.innerHTML = `<span class="room-code">${escapeHtml(d.label || ELEMENT_TYPES[type]?.icon || '')}</span>`;
+        el.appendChild(labelDiv);
+        
+      } else {
+        // Single rectangle (original behavior)
+        el.style.left = d.x + 'px';
+        el.style.top = d.y + 'px';
+        el.style.width = d.w + 'px';
+        el.style.height = d.h + 'px';
+        if (rotationTransform) el.style.transform = rotationTransform;
+        
+        // Content based on type
+        let content = '';
+        if (type === 'classroom' && c) {
+          content = `
+            <span class="room-code">${escapeHtml(c.code || c.id)}</span>
+            ${c.capacity ? `<span class="room-cap">${c.capacity} kişi</span>` : ''}
+          `;
+        } else {
+          const typeInfo = ELEMENT_TYPES[type] || {};
+          content = `
+            <span class="room-code">${typeInfo.icon || ''}${escapeHtml(d.label || typeInfo.label || '')}</span>
+          `;
+        }
+        
+        el.innerHTML = content + '<div class="resize-handle"></div>';
+      }
+      
+      makeDraggable(el, id);
+      if (!d.shapes || d.shapes.length === 0) {
+        makeResizable(el, id);
+      } else {
+        makeShapeResizable(el, id);
+      }
+      el.addEventListener('click', e => { if (!e._wasDragged) selectRoom(id); });
       mapCanvas.appendChild(el);
     }
 
@@ -2008,17 +2393,115 @@
       mapCanvas.querySelectorAll('.map-room').forEach(el => el.classList.toggle('selected', el.dataset.id === id));
       const c = classrooms.find(x => x.id === id);
       const d = mapData[id];
-      if (!c || !d) { mapInfoCard.style.display='none'; return; }
+      if (!d) { mapInfoCard.style.display='none'; return; }
+      
       mapInfoCard.style.display='block';
-      $('mapSelectedInfo').innerHTML = `
-        <div class="info-row"><span>Kod:</span><strong>${escapeHtml(c.code||c.id)}</strong></div>
-        <div class="info-row"><span>Kapasite:</span><strong>${c.capacity||'—'}</strong></div>
-        <div class="info-row"><span>Kat:</span><strong>${escapeHtml(getClassroomFloorValue(c)||'—')}</strong></div>
-        <div class="info-row"><span>Konum:</span><strong>${Math.round(d.x)}, ${Math.round(d.y)}</strong></div>
-      `;
+      
+      // Build info display
+      let infoHTML = '';
+      if (c) {
+        infoHTML = `
+          <div class="info-row"><span>Kod:</span><strong>${escapeHtml(c.code||c.id)}</strong></div>
+          <div class="info-row"><span>Tür:</span><strong>${escapeHtml(ELEMENT_TYPES[d.type]?.label || d.type)}</strong></div>
+          <div class="info-row"><span>Kapasite:</span><strong>${c.capacity||'—'}</strong></div>
+          <div class="info-row"><span>Kat:</span><strong>${escapeHtml(getClassroomFloorValue(c)||'—')}</strong></div>
+        `;
+      } else {
+        const typeInfo = ELEMENT_TYPES[d.type] || {};
+        infoHTML = `
+          <div class="info-row"><span>Tür:</span><strong>${escapeHtml(typeInfo.label || d.type)}</strong></div>
+          <div class="info-row"><span>Etiket:</span><strong>${escapeHtml(d.label || '—')}</strong></div>
+        `;
+      }
+      infoHTML += `<div class="info-row"><span>Konum:</span><strong>${Math.round(d.x)}, ${Math.round(d.y)}</strong></div>`;
+      
+      $('mapSelectedInfo').innerHTML = infoHTML;
       $('mapRoomW').value = Math.round(d.w);
       $('mapRoomH').value = Math.round(d.h);
+      
+      // Show/hide rotation controls for door and other rotatable types
+      const showRotation = ['door', 'corridor'].includes(d.type);
+      $('mapRotationSection').style.display = showRotation ? 'block' : 'none';
+      
+      // Render shape editor
+      renderShapeEditor(id);
     }
+
+    function renderShapeEditor(id) {
+      const d = mapData[id];
+      if (!d) return;
+      
+      const shapeList = $('mapShapeList');
+      const shapes = d.shapes || [];
+      
+      if (shapes.length === 0) {
+        shapeList.innerHTML = '<div style="color:var(--muted);font-size:11px;text-align:center;padding:8px">Tek dikdörtgen - Çoklu eklemek için + tıklayın</div>';
+      } else {
+        shapeList.innerHTML = shapes.map((shape, idx) => `
+          <div class="shape-item">
+            <input type="number" placeholder="X" value="${shape.offsetX || 0}" data-idx="${idx}" data-prop="offsetX" />
+            <input type="number" placeholder="Y" value="${shape.offsetY || 0}" data-idx="${idx}" data-prop="offsetY" />
+            <input type="number" placeholder="W" value="${shape.w || 40}" data-idx="${idx}" data-prop="w" />
+            <input type="number" placeholder="H" value="${shape.h || 30}" data-idx="${idx}" data-prop="h" />
+            <button data-idx="${idx}">×</button>
+          </div>
+        `).join('');
+        
+        // Add event listeners to shape inputs
+        shapeList.querySelectorAll('input').forEach(input => {
+          input.addEventListener('change', () => {
+            const idx = parseInt(input.dataset.idx);
+            const prop = input.dataset.prop;
+            const value = parseFloat(input.value) || 0;
+            if (d.shapes[idx]) {
+              d.shapes[idx][prop] = value;
+              renderMapPanel();
+              selectRoom(id);
+            }
+          });
+        });
+        
+        // Add event listeners to remove buttons
+        shapeList.querySelectorAll('button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.idx);
+            d.shapes.splice(idx, 1);
+            renderMapPanel();
+            selectRoom(id);
+          });
+        });
+      }
+    }
+
+    // Shape editor: Add shape button
+    $('mapAddShape').addEventListener('click', () => {
+      if (!mapSelectedId || !mapData[mapSelectedId]) return;
+      const d = mapData[mapSelectedId];
+      if (!d.shapes) d.shapes = [];
+      
+      // Add a new shape with default values
+      d.shapes.push({ offsetX: 0, offsetY: 0, w: 60, h: 40 });
+      
+      renderMapPanel();
+      selectRoom(mapSelectedId);
+    });
+
+    // Rotation controls
+    $('mapRotateLeft').addEventListener('click', () => {
+      if (!mapSelectedId || !mapData[mapSelectedId]) return;
+      const d = mapData[mapSelectedId];
+      d.rotation = ((d.rotation || 0) + 90) % 360;
+      renderMapPanel();
+      selectRoom(mapSelectedId);
+    });
+
+    $('mapRotateRight').addEventListener('click', () => {
+      if (!mapSelectedId || !mapData[mapSelectedId]) return;
+      const d = mapData[mapSelectedId];
+      d.rotation = ((d.rotation || 0) - 90 + 360) % 360;
+      renderMapPanel();
+      selectRoom(mapSelectedId);
+    });
 
     $('mapApplyDim').addEventListener('click', () => {
       if (!mapSelectedId || !mapData[mapSelectedId]) return;
@@ -2075,6 +2558,7 @@
     // ── Resize ──
     function makeResizable(el, id) {
       const handle = el.querySelector('.resize-handle');
+      if (!handle) return;
       handle.addEventListener('mousedown', e => {
         e.stopPropagation(); e.preventDefault();
         const startX=e.clientX, startY=e.clientY;
@@ -2098,6 +2582,38 @@
       });
     }
 
+    // ── Resize for multi-shape elements ──
+    function makeShapeResizable(el, id) {
+      const handles = el.querySelectorAll('.resize-handle');
+      handles.forEach(handle => {
+        handle.addEventListener('mousedown', e => {
+          e.stopPropagation(); e.preventDefault();
+          const shapeIndex = parseInt(handle.dataset.shapeIndex);
+          if (shapeIndex === undefined || !mapData[id].shapes[shapeIndex]) return;
+          
+          const startX = e.clientX, startY = e.clientY;
+          const shape = mapData[id].shapes[shapeIndex];
+          const startW = shape.w || 40;
+          const startH = shape.h || 30;
+          
+          const onMove = ev => {
+            shape.w = Math.max(20, startW + (ev.clientX - startX) / mapScale);
+            shape.h = Math.max(15, startH + (ev.clientY - startY) / mapScale);
+            renderMapPanel();
+            if (mapSelectedId === id) selectRoom(id);
+          };
+          
+          const onUp = () => {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+          };
+          
+          window.addEventListener('mousemove', onMove);
+          window.addEventListener('mouseup', onUp);
+        });
+      });
+    }
+
     // ── Save to Firestore ──
     $('mapSaveAllBtn').addEventListener('click', async () => {
       const btn = $('mapSaveAllBtn');
@@ -2105,14 +2621,47 @@
       btn.disabled=true; btn.textContent='Kaydediliyor...';
       try {
         const batch = writeBatch(db);
+        let saveCount = 0;
+        
         Object.entries(mapData).forEach(([id, pos]) => {
-          batch.update(doc(db, 'classrooms', id), {
-            mapX: pos.x, mapY: pos.y, mapW: pos.w, mapH: pos.h,
+          // Skip temp IDs (new elements not yet saved to Firestore)
+          if (id.startsWith('temp_')) {
+            console.warn('Skipping temp element:', id, '- needs to be saved as a classroom first');
+            return;
+          }
+          
+          const payload = {
+            mapX: pos.x, 
+            mapY: pos.y, 
+            mapW: pos.w, 
+            mapH: pos.h,
+            elementType: pos.type || 'classroom',
             mapUpdatedAt: serverTimestamp()
-          });
+          };
+          
+          // Add optional fields
+          if (pos.shapes && pos.shapes.length > 0) {
+            payload.shapes = pos.shapes;
+          }
+          if (pos.rotation) {
+            payload.rotation = pos.rotation;
+          }
+          if (pos.label) {
+            payload.label = pos.label;
+          }
+          
+          batch.update(doc(db, 'classrooms', id), payload);
+          saveCount++;
         });
+        
+        if (saveCount === 0) {
+          alert('Kaydedilecek eleman yok. Yeni eklenen elementler için önce sınıf olarak kaydedin.');
+          btn.disabled=false; btn.textContent=old;
+          return;
+        }
+        
         await batch.commit();
-        btn.textContent='✓ Kaydedildi'; btn.style.background='var(--success)';
+        btn.textContent='✓ Kaydedildi (' + saveCount + ')'; btn.style.background='var(--success)';
         setTimeout(()=>{ btn.textContent=old; btn.style.background=''; btn.disabled=false; },2200);
       } catch(e) {
         console.error(e);
@@ -2126,8 +2675,15 @@
       classrooms.forEach(c => {
         if (c.mapX !== undefined) {
           mapData[c.id] = {
-            x: c.mapX || 0, y: c.mapY || 0,
-            w: c.mapW || 80, h: c.mapH || 56
+            id: c.id,
+            type: c.elementType || 'classroom',
+            x: c.mapX || 0, 
+            y: c.mapY || 0,
+            w: c.mapW || 80, 
+            h: c.mapH || 56,
+            shapes: c.shapes || [],
+            rotation: c.rotation || 0,
+            label: c.label || c.code || ''
           };
         }
       });
