@@ -86,7 +86,8 @@ export function updateMapUIState() {
 
 export function loadMapPositions() {
   getClassrooms().forEach(c => {
-    if (c.mapX !== undefined) {
+    // mapX null veya undefined ise, yerleştirilmemiş demektir
+    if (c.mapX !== undefined && c.mapX !== null && typeof c.mapX === 'number') {
       // Eğer kampüs, blok veya floor bilgisi boşsa (eski veriler), yerleşmemiş gibi göster
       // Böylece kullanıcı tekrar yerleştirip kaydedebilir
       const campusId = c.campusId || '';
