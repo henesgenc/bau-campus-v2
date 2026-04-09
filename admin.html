@@ -413,6 +413,37 @@
     .map-room.storage:hover { border-color:#a8a880; }
     .map-room.storage.selected { background:#e5e5cc; border-color:#5a5a45; }
 
+    /* ── In-canvas quick delete button ── */
+    .map-room .quick-delete {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 20px;
+      height: 20px;
+      background: var(--danger-soft);
+      border: 1.5px solid #fca5a5;
+      border-radius: 50%;
+      color: var(--danger);
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      line-height: 1;
+      transition: background .12s, transform .12s;
+    }
+    .map-room:hover .quick-delete,
+    .map-room.selected .quick-delete {
+      display: flex;
+    }
+    .map-room .quick-delete:hover {
+      background: var(--danger);
+      color: #fff;
+      transform: scale(1.15);
+    }
+
     /* ── Tool Palette ── */
     .map-tool-palette {
       display:grid; grid-template-columns:repeat(2, 1fr); gap:6px;
@@ -825,7 +856,7 @@
                 <button id="mapAddShape" class="btn btn-ghost" style="width:100%;margin-top:6px;font-size:11px">＋ Dikdörtgen Ekle</button>
               </div>
               
-              <button id="mapRemoveBtn" class="btn" style="margin-top:12px">🗑 Haritadan Kaldır</button>
+              <button id="mapRemoveBtn" class="btn btn-danger" style="margin-top:12px;width:100%">🗑 Sil / Haritadan Kaldır</button>
             </div>
 
             <!-- Legend -->
@@ -2343,7 +2374,11 @@
         if (hoveredEdge) {
           placeDoorOnEdge(hoveredEdge.elementId, hoveredEdge.edge, activeTool);
           
-          // Don't switch back to select tool for doors - allow placing multiple doors
+          // Switch to select tool after placing door
+          activeTool = 'select';
+          document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+          document.querySelector('.tool-btn[data-type="select"]').classList.add('active');
+          mapOuter.style.cursor = 'grab';
           return;
         } else {
           // No edge detected - show hint
@@ -2769,99 +2804,74 @@
           svg.style.overflow = 'visible';
           svg.style.pointerEvents = 'none';
           
-          // Determine orientation based on dimensions
-          const isHorizontal = d.w > d.h;
+          // Use attachedEdge for correct arc direction, fall back to dimension check
+          const attachedEdge = d.attachedEdge || (d.w > d.h ? 'bottom' : 'right');
           
-          if (isHorizontal) {
-            // Horizontal door (top/bottom edge)
-            // Door line (in wall)
-            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            line.setAttribute('x1', '0');
-            line.setAttribute('y1', '0');
-            line.setAttribute('x2', d.w);
-            line.setAttribute('y2', '0');
-            line.setAttribute('stroke', '#8b6f47');
-            line.setAttribute('stroke-width', '4');
-            line.setAttribute('stroke-linecap', 'round');
-            svg.appendChild(line);
-            
-            // Open arc (90 degree swing) - always opens in the same direction, CSS rotation handles the rest
-            const arcRadius = isDouble ? d.w * 0.225 : d.w * 0.45;
-            const startX = isDouble ? d.w / 2 : 0;
-            
+          function makePath(d_attr) {
+            const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            p.setAttribute('d', d_attr);
+            p.setAttribute('stroke', '#a67c52');
+            p.setAttribute('stroke-width', '1.5');
+            p.setAttribute('fill', 'rgba(166,124,82,0.08)');
+            p.setAttribute('stroke-dasharray', '3,2');
+            p.setAttribute('opacity', '0.75');
+            return p;
+          }
+          function makeLine(x1,y1,x2,y2) {
+            const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+            l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+            l.setAttribute('stroke', '#8b6f47');
+            l.setAttribute('stroke-width', '4');
+            l.setAttribute('stroke-linecap', 'round');
+            return l;
+          }
+
+          const W = d.w, H = d.h;
+
+          if (attachedEdge === 'bottom') {
+            // Wall line at top, arc opens downward
+            svg.appendChild(makeLine(0, 0, W, 0));
             if (isDouble) {
-              // Left leaf
-              const arc1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-              arc1.setAttribute('d', `M 0 0 L 0 ${arcRadius} A ${arcRadius} ${arcRadius} 0 0 0 ${d.w/2} 0`);
-              arc1.setAttribute('stroke', '#a67c52');
-              arc1.setAttribute('stroke-width', '1.5');
-              arc1.setAttribute('fill', 'none');
-              arc1.setAttribute('stroke-dasharray', '3,2');
-              arc1.setAttribute('opacity', '0.65');
-              svg.appendChild(arc1);
-              // Right leaf
-              const arc2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-              arc2.setAttribute('d', `M ${d.w} 0 L ${d.w} ${arcRadius} A ${arcRadius} ${arcRadius} 0 0 1 ${d.w/2} 0`);
-              arc2.setAttribute('stroke', '#a67c52');
-              arc2.setAttribute('stroke-width', '1.5');
-              arc2.setAttribute('fill', 'none');
-              arc2.setAttribute('stroke-dasharray', '3,2');
-              arc2.setAttribute('opacity', '0.65');
-              svg.appendChild(arc2);
+              const r = W / 2;
+              svg.appendChild(makePath(`M 0 0 L 0 ${r} A ${r} ${r} 0 0 0 ${W/2} 0`));
+              svg.appendChild(makePath(`M ${W} 0 L ${W} ${r} A ${r} ${r} 0 0 1 ${W/2} 0`));
             } else {
-              const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-              arc.setAttribute('d', `M 0 0 L 0 ${arcRadius} A ${arcRadius} ${arcRadius} 0 0 0 ${arcRadius} 0`);
-              arc.setAttribute('stroke', '#a67c52');
-              arc.setAttribute('stroke-width', '1.5');
-              arc.setAttribute('fill', 'none');
-              arc.setAttribute('stroke-dasharray', '3,2');
-              arc.setAttribute('opacity', '0.65');
-              svg.appendChild(arc);
+              const r = W * 0.9;
+              svg.appendChild(makePath(`M 0 0 L 0 ${r} A ${r} ${r} 0 0 0 ${r} 0`));
             }
-          } else {
-            // Vertical door (left/right edge)
-            // Door line (in wall)
-            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            line.setAttribute('x1', '0');
-            line.setAttribute('y1', '0');
-            line.setAttribute('x2', '0');
-            line.setAttribute('y2', d.h);
-            line.setAttribute('stroke', '#8b6f47');
-            line.setAttribute('stroke-width', '4');
-            line.setAttribute('stroke-linecap', 'round');
-            svg.appendChild(line);
-            
-            // Open arc (90 degree swing)
-            const arcRadius = isDouble ? d.h * 0.225 : d.h * 0.45;
-            
+          } else if (attachedEdge === 'top') {
+            // Wall line at bottom, arc opens upward
+            svg.appendChild(makeLine(0, H, W, H));
             if (isDouble) {
-              // Top leaf
-              const arc1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-              arc1.setAttribute('d', `M 0 0 L ${arcRadius} 0 A ${arcRadius} ${arcRadius} 0 0 0 0 ${d.h/2}`);
-              arc1.setAttribute('stroke', '#a67c52');
-              arc1.setAttribute('stroke-width', '1.5');
-              arc1.setAttribute('fill', 'none');
-              arc1.setAttribute('stroke-dasharray', '3,2');
-              arc1.setAttribute('opacity', '0.65');
-              svg.appendChild(arc1);
-              // Bottom leaf
-              const arc2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-              arc2.setAttribute('d', `M 0 ${d.h} L ${arcRadius} ${d.h} A ${arcRadius} ${arcRadius} 0 0 1 0 ${d.h/2}`);
-              arc2.setAttribute('stroke', '#a67c52');
-              arc2.setAttribute('stroke-width', '1.5');
-              arc2.setAttribute('fill', 'none');
-              arc2.setAttribute('stroke-dasharray', '3,2');
-              arc2.setAttribute('opacity', '0.65');
-              svg.appendChild(arc2);
+              const r = W / 2;
+              svg.appendChild(makePath(`M 0 ${H} L 0 ${H-r} A ${r} ${r} 0 0 1 ${W/2} ${H}`));
+              svg.appendChild(makePath(`M ${W} ${H} L ${W} ${H-r} A ${r} ${r} 0 0 0 ${W/2} ${H}`));
             } else {
-              const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-              arc.setAttribute('d', `M 0 0 L ${arcRadius} 0 A ${arcRadius} ${arcRadius} 0 0 0 0 ${arcRadius}`);
-              arc.setAttribute('stroke', '#a67c52');
-              arc.setAttribute('stroke-width', '1.5');
-              arc.setAttribute('fill', 'none');
-              arc.setAttribute('stroke-dasharray', '3,2');
-              arc.setAttribute('opacity', '0.65');
-              svg.appendChild(arc);
+              const r = W * 0.9;
+              svg.appendChild(makePath(`M 0 ${H} L 0 ${H-r} A ${r} ${r} 0 0 1 ${r} ${H}`));
+            }
+          } else if (attachedEdge === 'right') {
+            // Wall line at left, arc opens rightward
+            svg.appendChild(makeLine(0, 0, 0, H));
+            if (isDouble) {
+              const r = H / 2;
+              svg.appendChild(makePath(`M 0 0 L ${r} 0 A ${r} ${r} 0 0 0 0 ${H/2}`));
+              svg.appendChild(makePath(`M 0 ${H} L ${r} ${H} A ${r} ${r} 0 0 1 0 ${H/2}`));
+            } else {
+              const r = H * 0.9;
+              svg.appendChild(makePath(`M 0 0 L ${r} 0 A ${r} ${r} 0 0 0 0 ${r}`));
+            }
+          } else { // left
+            // Wall line at right, arc opens leftward
+            svg.appendChild(makeLine(W, 0, W, H));
+            if (isDouble) {
+              const r = H / 2;
+              svg.appendChild(makePath(`M ${W} 0 L ${W-r} 0 A ${r} ${r} 0 0 1 ${W} ${H/2}`));
+              svg.appendChild(makePath(`M ${W} ${H} L ${W-r} ${H} A ${r} ${r} 0 0 0 ${W} ${H/2}`));
+            } else {
+              const r = H * 0.9;
+              svg.appendChild(makePath(`M ${W} 0 L ${W-r} 0 A ${r} ${r} 0 0 1 ${W} ${r}`));
             }
           }
           
@@ -2896,6 +2906,18 @@
         }
       }
       el.addEventListener('click', e => { if (!e._wasDragged) selectRoom(id); });
+      
+      // Quick delete button
+      const qDel = document.createElement('button');
+      qDel.className = 'quick-delete';
+      qDel.textContent = '×';
+      qDel.title = 'Sil';
+      qDel.addEventListener('click', e => {
+        e.stopPropagation();
+        deleteMapElement(id);
+      });
+      el.appendChild(qDel);
+      
       mapCanvas.appendChild(el);
     }
 
@@ -3049,24 +3071,40 @@
       selectRoom(mapSelectedId);
     });
 
-    $('mapRemoveBtn').addEventListener('click', () => {
-      if (!mapSelectedId) return;
-      const removingId = mapSelectedId;
-      const removingData = mapData[removingId];
+    // ── Delete element (shared) ──
+    function deleteMapElement(id) {
+      if (!id || !mapData[id]) return;
+      const removingData = mapData[id];
       
       // If removing a parent element, also remove all attached doors
-      if (removingData && removingData.type !== 'door' && removingData.type !== 'doubleDoor') {
-        Object.keys(mapData).forEach(id => {
-          if (mapData[id].attachedTo === removingId) {
-            delete mapData[id];
+      if (removingData.type !== 'door' && removingData.type !== 'doubleDoor') {
+        Object.keys(mapData).forEach(did => {
+          if (mapData[did].attachedTo === id) {
+            delete mapData[did];
           }
         });
       }
       
-      delete mapData[removingId];
-      mapSelectedId = null;
-      mapInfoCard.style.display='none';
+      delete mapData[id];
+      if (mapSelectedId === id) {
+        mapSelectedId = null;
+        mapInfoCard.style.display = 'none';
+      }
       renderMapPanel();
+    }
+
+    $('mapRemoveBtn').addEventListener('click', () => {
+      if (!mapSelectedId) return;
+      deleteMapElement(mapSelectedId);
+    });
+
+    // Delete key shortcut
+    document.addEventListener('keydown', e => {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && mapSelectedId) {
+        // Don't fire if user is typing in an input
+        if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'SELECT')) return;
+        deleteMapElement(mapSelectedId);
+      }
     });
 
     // ── Drag ──
@@ -3250,13 +3288,20 @@
       if (!parent) return;
       
       const edge = door.attachedEdge;
+      const doorThickness = 6;
       
-      // Constrain based on edge - door slides along the wall, not off it
-      if (edge === 'top' || edge === 'bottom') {
-        // Horizontal door - constrain X position along parent width
+      // Re-lock the perpendicular axis to the wall, allow sliding along the wall
+      if (edge === 'top') {
+        door.y = parent.y - doorThickness / 2;
         door.x = Math.max(parent.x, Math.min(parent.x + parent.w - door.w, door.x));
-      } else if (edge === 'left' || edge === 'right') {
-        // Vertical door - constrain Y position along parent height
+      } else if (edge === 'bottom') {
+        door.y = parent.y + parent.h - doorThickness / 2;
+        door.x = Math.max(parent.x, Math.min(parent.x + parent.w - door.w, door.x));
+      } else if (edge === 'left') {
+        door.x = parent.x - doorThickness * 5;
+        door.y = Math.max(parent.y, Math.min(parent.y + parent.h - door.h, door.y));
+      } else if (edge === 'right') {
+        door.x = parent.x + parent.w - doorThickness / 2;
         door.y = Math.max(parent.y, Math.min(parent.y + parent.h - door.h, door.y));
       }
       
