@@ -342,15 +342,18 @@
     .map-room.corridor:hover { border-color:#707070; }
     .map-room.corridor.selected { background:#d0d0d0; border-color:#505050; }
     
-    .map-room.door { background:#d4a574; border-color:#8b6f47; color:#5a4a2f; }
-    .map-room.door:hover { border-color:#6b5537; }
-    .map-room.door.selected { background:#c89060; border-color:#5a4a2f; }
-    
-    /* Door rendering as line on edge */
-    .map-room.door {
-      display:flex; align-items:center; justify-content:center;
-      font-size:9px; font-weight:800; letter-spacing:0.5px;
-      border-radius:2px;
+    .map-room.door, .map-room.doubleDoor { 
+      background:transparent; 
+      border:none; 
+      box-shadow:none; 
+      color:#5a4a2f;
+      pointer-events:auto;
+    }
+    .map-room.door:hover, .map-room.doubleDoor:hover { opacity:0.85; }
+    .map-room.door.selected, .map-room.doubleDoor.selected { 
+      outline:2px solid #1a56db;
+      outline-offset:2px;
+      z-index:10;
     }
     
     /* Edge hover highlighting for door placement */
@@ -703,9 +706,9 @@
           <div class="map-sidebar">
 
             <!-- Tool Palette -->
-            <div class="map-sidebar-card">
+            <div class="map-sidebar-card" id="mapToolCard">
               <h3>Araçlar</h3>
-              <div class="map-tool-palette">
+              <div class="map-tool-palette" id="mapToolPalette" style="opacity:0.4;pointer-events:none">
                 <button class="tool-btn active" data-type="select" title="Seç">
                   <span class="tool-icon">➤</span>
                   <span>Seç</span>
@@ -718,9 +721,13 @@
                   <span class="tool-icon">🛤</span>
                   <span>Koridor</span>
                 </button>
-                <button class="tool-btn" data-type="door" title="Kapı">
+                <button class="tool-btn" data-type="door" title="Tek Kapı">
                   <span class="tool-icon">🚪</span>
-                  <span>Kapı</span>
+                  <span>Tek Kapı</span>
+                </button>
+                <button class="tool-btn" data-type="doubleDoor" title="Çift Kapı">
+                  <span class="tool-icon">🚪🚪</span>
+                  <span>Çift Kapı</span>
                 </button>
                 <button class="tool-btn" data-type="toilet" title="WC">
                   <span class="tool-icon">🚺</span>
@@ -771,7 +778,7 @@
             </div>
 
             <!-- Unplaced classrooms -->
-            <div class="map-sidebar-card">
+            <div class="map-sidebar-card" id="mapUnplacedCard" style="display:none">
               <h3>Yerleştirilmemiş Sınıflar <span id="mapUnplacedCount" style="color:var(--text)">0</span></h3>
               <div id="mapUnplacedList" class="map-unplaced-list">
                 <div style="color:var(--muted);font-size:13px;text-align:center;padding:12px">Filtre seçin</div>
@@ -828,8 +835,14 @@
                   Koridor
                 </div>
                 <div class="map-legend-row">
-                  <div class="map-legend-dot" style="background:#d4a574;border-color:#8b6f47"></div>
-                  Kapı
+                  <div class="map-legend-dot" style="background:#fff;border:2px solid #8b6f47"></div>
+                  Tek Kapı
+                </div>
+                <div class="map-legend-row">
+                  <div class="map-legend-dot" style="background:#fff;border:2px solid #8b6f47;position:relative">
+                    <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:8px;font-weight:700;color:#8b6f47">2</span>
+                  </div>
+                  Çift Kapı
                 </div>
                 <div class="map-legend-row">
                   <div class="map-legend-dot" style="background:#d0e7ff;border-color:#5a9fd4"></div>
@@ -878,22 +891,39 @@
 
           <!-- CANVAS AREA -->
           <div class="map-canvas-wrap">
-            <div class="map-toolbar">
-              <label>Zemin:</label>
-              <select id="mapFloorSelect">
-                <option value="">— Tüm Katlar —</option>
-              </select>
-              <div style="flex:1"></div>
-              <button class="btn btn-ghost" id="mapZoomOut" style="padding:6px 12px;font-size:15px">−</button>
-              <span id="mapZoomLabel" style="font-size:13px;font-weight:700;min-width:42px;text-align:center">100%</span>
-              <button class="btn btn-ghost" id="mapZoomIn"  style="padding:6px 12px;font-size:15px">+</button>
-              <button class="btn btn-ghost" id="mapZoomReset" style="padding:6px 10px;font-size:12px">Sıfırla</button>
+            <!-- Placeholder for when no campus/block selected -->
+            <div id="mapPlaceholder" style="display:flex;align-items:center;justify-content:center;min-height:600px;background:#f7f8fb;border-radius:var(--radius);">
+              <div style="text-align:center;padding:40px;max-width:420px">
+                <div style="font-size:64px;margin-bottom:16px;opacity:0.3">🗺️</div>
+                <h3 style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:12px">Kat Planı Editörü</h3>
+                <p style="font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:20px">
+                  Başlamak için soldaki filtrelerden <strong style="color:var(--text)">Kampüs</strong> ve <strong style="color:var(--text)">Blok</strong> seçin.
+                </p>
+                <div style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;background:var(--primary-soft);color:var(--primary);border-radius:10px;font-size:13px;font-weight:600">
+                  ← Soldaki "Filtrele" bölümünden başlayın
+                </div>
+              </div>
             </div>
-            <div class="map-canvas-outer" id="mapCanvasOuter" style="height:600px">
-              <div id="mapCanvas" style="width:1200px;height:900px;position:relative"></div>
-            </div>
-            <div class="map-hint">
-              🎯 Elementler otomatik hizalanır · 🚪 Kapılar yapılara yapışır · ⇧ Shift: serbest hareket · Scroll: zoom
+            
+            <!-- Main canvas area (hidden initially) -->
+            <div id="mapMainArea" style="display:none">
+              <div class="map-toolbar">
+                <label>Zemin:</label>
+                <select id="mapFloorSelect">
+                  <option value="">— Tüm Katlar —</option>
+                </select>
+                <div style="flex:1"></div>
+                <button class="btn btn-ghost" id="mapZoomOut" style="padding:6px 12px;font-size:15px">−</button>
+                <span id="mapZoomLabel" style="font-size:13px;font-weight:700;min-width:42px;text-align:center">100%</span>
+                <button class="btn btn-ghost" id="mapZoomIn"  style="padding:6px 12px;font-size:15px">+</button>
+                <button class="btn btn-ghost" id="mapZoomReset" style="padding:6px 10px;font-size:12px">Sıfırla</button>
+              </div>
+              <div class="map-canvas-outer" id="mapCanvasOuter" style="height:600px">
+                <div id="mapCanvas" style="width:1200px;height:900px;position:relative"></div>
+              </div>
+              <div class="map-hint">
+                🎯 Elementler otomatik hizalanır · 🚪 Kapılar yapılara yapışır · ⇧ Shift: serbest hareket · Scroll: zoom
+              </div>
             </div>
           </div>
 
@@ -1102,6 +1132,11 @@
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
       $(tab + 'Panel').classList.add('active');
+      
+      // Update map UI state when switching to map tab
+      if (tab === 'map') {
+        updateMapUIState();
+      }
     }
 
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -2093,7 +2128,8 @@
     const ELEMENT_TYPES = {
       classroom: { icon: '🪑', label: 'Sınıf', defaultW: 80, defaultH: 56 },
       corridor: { icon: '🛤', label: 'Koridor', defaultW: 120, defaultH: 40 },
-      door: { icon: '🚪', label: 'Kapı', defaultW: 30, defaultH: 20 },
+      door: { icon: '🚪', label: 'Tek Kapı', defaultW: 6, defaultH: 40 },
+      doubleDoor: { icon: '🚪🚪', label: 'Çift Kapı', defaultW: 6, defaultH: 80 },
       toilet: { icon: '🚺', label: 'WC', defaultW: 50, defaultH: 50 },
       office: { icon: '💼', label: 'Ofis', defaultW: 70, defaultH: 60 },
       stairs: { icon: '🪧', label: 'Merdiven', defaultW: 60, defaultH: 80 },
@@ -2164,6 +2200,37 @@
       sel.innerHTML = '<option value="">— Kampüs Seç —</option>' +
         campuses.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
       $('mapBlockFilter').innerHTML = '<option value="">— Blok Seç —</option>';
+      updateMapUIState();
+    }
+    
+    // Check if campus and block are selected, show/hide UI accordingly
+    function updateMapUIState() {
+      const campusId = $('mapCampusFilter').value;
+      const blockId = $('mapBlockFilter').value;
+      const isReady = campusId && blockId;
+      
+      // Show/hide placeholder and main area
+      if ($('mapPlaceholder')) $('mapPlaceholder').style.display = isReady ? 'none' : 'flex';
+      if ($('mapMainArea')) $('mapMainArea').style.display = isReady ? 'block' : 'none';
+      
+      // Enable/disable tool palette
+      const toolPalette = $('mapToolPalette');
+      if (toolPalette) {
+        toolPalette.style.opacity = isReady ? '1' : '0.4';
+        toolPalette.style.pointerEvents = isReady ? 'auto' : 'none';
+      }
+      
+      // Show/hide unplaced card
+      if ($('mapUnplacedCard')) $('mapUnplacedCard').style.display = isReady ? 'block' : 'none';
+      
+      // If not ready, hide info card and reset tool
+      if (!isReady) {
+        if ($('mapInfoCard')) $('mapInfoCard').style.display = 'none';
+        activeTool = 'select';
+        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+        const selectBtn = document.querySelector('.tool-btn[data-type="select"]');
+        if (selectBtn) selectBtn.classList.add('active');
+      }
     }
 
     $('mapCampusFilter').addEventListener('change', () => {
@@ -2172,10 +2239,12 @@
       const filtered = blocks.filter(b => b.campusId === cid);
       sel.innerHTML = '<option value="">— Blok Seç —</option>' +
         filtered.map(b => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
+      updateMapUIState();
       renderMapPanel();
     });
 
     $('mapBlockFilter').addEventListener('change', () => {
+      updateMapUIState();
       renderMapPanel();
       // populate floor select
       const bid = $('mapBlockFilter').value;
@@ -2197,12 +2266,12 @@
         btn.classList.add('active');
         if (activeTool === 'select') {
           mapOuter.style.cursor = 'grab';
-        } else if (activeTool === 'door') {
+        } else if (activeTool === 'door' || activeTool === 'doubleDoor') {
           mapOuter.style.cursor = 'crosshair';
           // Show hint for door placement
           const hint = document.createElement('div');
           hint.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#1a56db;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:1000;box-shadow:0 4px 12px rgba(26,86,219,0.3);';
-          hint.textContent = '🚪 Sınıf, koridor veya ofis kenarlarına tıklayarak kapı ekleyin';
+          hint.textContent = `${activeTool === 'doubleDoor' ? '🚪🚪' : '🚪'} Sınıf, koridor veya ofis kenarlarına tıklayarak kapı ekleyin`;
           document.body.appendChild(hint);
           setTimeout(() => hint.remove(), 3000);
         } else {
@@ -2225,10 +2294,10 @@
       }
       
       // Special handling for door tool
-      if (activeTool === 'door') {
+      if (activeTool === 'door' || activeTool === 'doubleDoor') {
         // Check if clicking on an edge
         if (hoveredEdge) {
-          placeDoorOnEdge(hoveredEdge.elementId, hoveredEdge.edge);
+          placeDoorOnEdge(hoveredEdge.elementId, hoveredEdge.edge, activeTool);
           
           // Don't switch back to select tool for doors - allow placing multiple doors
           return;
@@ -2257,7 +2326,7 @@
     
     // Mouse move for edge detection (door placement)
     mapCanvas.addEventListener('mousemove', e => {
-      if (activeTool !== 'door') {
+      if (activeTool !== 'door' && activeTool !== 'doubleDoor') {
         // Clear any edge highlights
         if (hoveredEdge) {
           const prevEl = mapCanvas.querySelector(`[data-id="${hoveredEdge.elementId}"]`);
@@ -2278,7 +2347,7 @@
       
       Object.entries(mapData).forEach(([id, element]) => {
         // Skip doors themselves
-        if (element.type === 'door') return;
+        if (element.type === 'door' || element.type === 'doubleDoor') return;
         
         const ex = element.x;
         const ey = element.y;
@@ -2327,7 +2396,7 @@
     });
     
     // Place door on specific edge of an element
-    function placeDoorOnEdge(parentElementId, edge) {
+    function placeDoorOnEdge(parentElementId, edge, doorType = 'door') {
       const parent = mapData[parentElementId];
       if (!parent) return;
       
@@ -2339,7 +2408,8 @@
       // Calculate door position and size based on edge
       let doorX, doorY, doorW, doorH, rotation;
       const doorThickness = 6;
-      const doorLength = 40;
+      const isDouble = doorType === 'doubleDoor';
+      const doorLength = isDouble ? 80 : 40;
       
       if (edge === 'top') {
         doorX = parent.x + parent.w / 2 - doorLength / 2;
@@ -2352,7 +2422,7 @@
         doorY = parent.y + parent.h / 2 - doorLength / 2;
         doorW = doorThickness;
         doorH = doorLength;
-        rotation = 90;
+        rotation = 0;
       } else if (edge === 'bottom') {
         doorX = parent.x + parent.w / 2 - doorLength / 2;
         doorY = parent.y + parent.h - doorThickness / 2;
@@ -2364,19 +2434,19 @@
         doorY = parent.y + parent.h / 2 - doorLength / 2;
         doorW = doorThickness;
         doorH = doorLength;
-        rotation = 90;
+        rotation = 0;
       }
       
       mapData[tempId] = {
         id: tempId,
-        type: 'door',
+        type: doorType,
         x: doorX,
         y: doorY,
         w: doorW,
         h: doorH,
         shapes: [],
         rotation,
-        label: 'KAPI',
+        label: isDouble ? 'ÇİFT KAPI' : 'KAPI',
         campusId,
         blockId,
         floor,
@@ -2405,6 +2475,16 @@
 
     function renderMapPanel() {
       if (currentTab !== 'map') return;
+      
+      // Don't render if campus and block are not selected
+      const campusId = $('mapCampusFilter').value;
+      const blockId = $('mapBlockFilter').value;
+      if (!campusId || !blockId) {
+        // Clear canvas
+        if (mapCanvas) mapCanvas.innerHTML = '';
+        return;
+      }
+      
       const filtered = getFilteredClassrooms();
       const placed   = filtered.filter(c => mapData[c.id]);
       const unplaced = filtered.filter(c => !mapData[c.id]);
@@ -2625,13 +2705,84 @@
         if (rotationTransform) el.style.transform = rotationTransform;
         
         // Special rendering for doors
-        if (type === 'door') {
-          // Door as a line/bar with label
-          el.style.display = 'flex';
-          el.style.alignItems = 'center';
-          el.style.justifyContent = 'center';
-          el.style.borderRadius = '2px';
-          el.innerHTML = `<span class="room-code">${escapeHtml(d.label || 'KAPI')}</span>`;
+        if (type === 'door' || type === 'doubleDoor') {
+          // SVG rendering: cross line + open arc
+          const isDouble = type === 'doubleDoor';
+          const rotation = d.rotation || 0;
+          
+          // Create SVG element
+          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svg.setAttribute('width', d.w);
+          svg.setAttribute('height', d.h);
+          svg.setAttribute('viewBox', `0 0 ${d.w} ${d.h}`);
+          svg.style.position = 'absolute';
+          svg.style.top = '0';
+          svg.style.left = '0';
+          svg.style.overflow = 'visible';
+          svg.style.pointerEvents = 'none';
+          
+          // Determine orientation based on dimensions
+          const isHorizontal = d.w > d.h;
+          
+          if (isHorizontal) {
+            // Horizontal door (top/bottom edge)
+            // Door line (in wall)
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', '0');
+            line.setAttribute('y1', d.h / 2);
+            line.setAttribute('x2', d.w);
+            line.setAttribute('y2', d.h / 2);
+            line.setAttribute('stroke', '#8b6f47');
+            line.setAttribute('stroke-width', '4');
+            line.setAttribute('stroke-linecap', 'round');
+            svg.appendChild(line);
+            
+            // Open arc (90 degree swing)
+            const arcRadius = isDouble ? d.w / 2 : d.w / 2;
+            const centerX = d.w / 2;
+            const centerY = d.h / 2;
+            const arcDirection = rotation === 180 ? -1 : 1; // Opens up or down
+            
+            const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            const arcY = centerY + (arcRadius * arcDirection);
+            arc.setAttribute('d', `M ${centerX} ${centerY} L ${centerX} ${arcY} A ${arcRadius} ${arcRadius} 0 0 1 ${centerX + arcRadius} ${centerY}`);
+            arc.setAttribute('stroke', '#a67c52');
+            arc.setAttribute('stroke-width', '2');
+            arc.setAttribute('fill', 'none');
+            arc.setAttribute('stroke-dasharray', '4,3');
+            arc.setAttribute('opacity', '0.7');
+            svg.appendChild(arc);
+          } else {
+            // Vertical door (left/right edge)
+            // Door line (in wall)
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', d.w / 2);
+            line.setAttribute('y1', '0');
+            line.setAttribute('x2', d.w / 2);
+            line.setAttribute('y2', d.h);
+            line.setAttribute('stroke', '#8b6f47');
+            line.setAttribute('stroke-width', '4');
+            line.setAttribute('stroke-linecap', 'round');
+            svg.appendChild(line);
+            
+            // Open arc (90 degree swing)
+            const arcRadius = isDouble ? d.h / 2 : d.h / 2;
+            const centerX = d.w / 2;
+            const centerY = d.h / 2;
+            const arcDirection = rotation === 180 ? -1 : 1; // Opens left or right
+            
+            const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            const arcX = centerX + (arcRadius * arcDirection);
+            arc.setAttribute('d', `M ${centerX} ${centerY} L ${arcX} ${centerY} A ${arcRadius} ${arcRadius} 0 0 1 ${centerX} ${centerY - arcRadius}`);
+            arc.setAttribute('stroke', '#a67c52');
+            arc.setAttribute('stroke-width', '2');
+            arc.setAttribute('fill', 'none');
+            arc.setAttribute('stroke-dasharray', '4,3');
+            arc.setAttribute('opacity', '0.7');
+            svg.appendChild(arc);
+          }
+          
+          el.appendChild(svg);
           // No resize handle for doors
         } else {
           // Content based on type
@@ -2654,7 +2805,7 @@
       
       makeDraggable(el, id);
       // Doors should not be resizable
-      if (type !== 'door') {
+      if (type !== 'door' && type !== 'doubleDoor') {
         if (!d.shapes || d.shapes.length === 0) {
           makeResizable(el, id);
         } else {
@@ -2691,7 +2842,7 @@
         `;
         
         // Show door attachment info
-        if (d.type === 'door' && d.attachedTo) {
+        if ((d.type === 'door' || d.type === 'doubleDoor') && d.attachedTo) {
           const attachedElement = mapData[d.attachedTo];
           const attachedClassroom = classrooms.find(c => c.id === d.attachedTo);
           const attachedName = attachedClassroom ? attachedClassroom.code : (attachedElement?.label || d.attachedTo);
@@ -2709,16 +2860,16 @@
       $('mapRoomH').value = Math.round(d.h);
       
       // Hide dimension controls for doors (fixed size)
-      const showDimensions = d.type !== 'door';
+      const showDimensions = d.type !== 'door' && d.type !== 'doubleDoor';
       $('mapRoomW').parentElement.parentElement.style.display = showDimensions ? 'grid' : 'none';
       $('mapApplyDim').style.display = showDimensions ? 'block' : 'none';
       
       // Show/hide rotation controls for door and other rotatable types
-      const showRotation = ['door', 'corridor'].includes(d.type);
+      const showRotation = ['door', 'doubleDoor', 'corridor'].includes(d.type);
       $('mapRotationSection').style.display = showRotation ? 'block' : 'none';
       
       // Hide shape editor for doors
-      const showShapeEditor = d.type !== 'door';
+      const showShapeEditor = d.type !== 'door' && d.type !== 'doubleDoor';
       $('mapShapeSection').style.display = showShapeEditor ? 'block' : 'none';
       
       // Render shape editor
@@ -2790,7 +2941,9 @@
     $('mapRotateLeft').addEventListener('click', () => {
       if (!mapSelectedId || !mapData[mapSelectedId]) return;
       const d = mapData[mapSelectedId];
-      d.rotation = ((d.rotation || 0) + 90) % 360;
+      const isDoor = ['door', 'doubleDoor'].includes(d.type);
+      const step = isDoor ? 180 : 90; // Doors rotate 180°, others 90°
+      d.rotation = ((d.rotation || 0) + step) % 360;
       renderMapPanel();
       selectRoom(mapSelectedId);
     });
@@ -2798,7 +2951,9 @@
     $('mapRotateRight').addEventListener('click', () => {
       if (!mapSelectedId || !mapData[mapSelectedId]) return;
       const d = mapData[mapSelectedId];
-      d.rotation = ((d.rotation || 0) - 90 + 360) % 360;
+      const isDoor = ['door', 'doubleDoor'].includes(d.type);
+      const step = isDoor ? 180 : 90; // Doors rotate 180°, others 90°
+      d.rotation = ((d.rotation || 0) - step + 360) % 360;
       renderMapPanel();
       selectRoom(mapSelectedId);
     });
@@ -2854,6 +3009,10 @@
           mapData[id].y = newY;
           el.style.left = mapData[id].x+'px';
           el.style.top  = mapData[id].y+'px';
+          
+          // Update attached doors (parent tracking)
+          updateAttachedDoors(id, dx, dy);
+          
           if (mapSelectedId===id) {
             const infoRow = $('mapSelectedInfo').querySelector('.info-row:last-child strong');
             if (infoRow) {
@@ -2949,6 +3108,59 @@
       });
       
       return { x: snappedX, y: snappedY };
+    }
+    
+    // ── Update Attached Doors (Parent Tracking) ──
+    function updateAttachedDoors(parentId, dx, dy) {
+      Object.values(mapData).forEach(element => {
+        if (element.attachedTo === parentId && ['door', 'doubleDoor'].includes(element.type)) {
+          element.x += dx;
+          element.y += dy;
+          
+          // Update DOM element position
+          const doorEl = mapCanvas.querySelector(`[data-id="${element.id}"]`);
+          if (doorEl) {
+            doorEl.style.left = element.x + 'px';
+            doorEl.style.top = element.y + 'px';
+          }
+          
+          // Constrain door to parent bounds
+          constrainDoorToParent(element.id);
+        }
+      });
+    }
+    
+    // ── Constrain Door to Parent Bounds ──
+    function constrainDoorToParent(doorId) {
+      const door = mapData[doorId];
+      if (!door || !door.attachedTo) return;
+      
+      const parent = mapData[door.attachedTo];
+      if (!parent) return;
+      
+      const edge = door.attachedEdge;
+      const parentBounds = {
+        left: parent.x,
+        right: parent.x + parent.w,
+        top: parent.y,
+        bottom: parent.y + parent.h
+      };
+      
+      // Constrain based on edge
+      if (edge === 'top' || edge === 'bottom') {
+        // Horizontal door - constrain X position
+        door.x = Math.max(parentBounds.left, Math.min(parentBounds.right - door.w, door.x));
+      } else if (edge === 'left' || edge === 'right') {
+        // Vertical door - constrain Y position
+        door.y = Math.max(parentBounds.top, Math.min(parentBounds.bottom - door.h, door.y));
+      }
+      
+      // Update DOM
+      const doorEl = mapCanvas.querySelector(`[data-id="${doorId}"]`);
+      if (doorEl) {
+        doorEl.style.left = door.x + 'px';
+        doorEl.style.top = door.y + 'px';
+      }
     }
 
     // ── Resize ──
