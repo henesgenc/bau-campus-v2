@@ -87,6 +87,18 @@ export function updateMapUIState() {
 export function loadMapPositions() {
   getClassrooms().forEach(c => {
     if (c.mapX !== undefined) {
+      // Eğer kampüs, blok veya floor bilgisi boşsa (eski veriler), yerleşmemiş gibi göster
+      // Böylece kullanıcı tekrar yerleştirip kaydedebilir
+      const campusId = c.campusId || '';
+      const blockId = c.blockId || '';
+      const floor = c.floor || '';
+      
+      // Sadece tam bilgisi olan derslikleri yükle
+      if (!campusId || !blockId || !floor) {
+        // Bu derslik yerleşmemiş gibi davranacak (mapData'ya eklenmeyecek)
+        return;
+      }
+      
       mapData[c.id] = {
         id: c.id,
         type: c.elementType || 'classroom',
@@ -100,9 +112,9 @@ export function loadMapPositions() {
         attachedTo: c.attachedTo || '',
         attachedEdge: c.attachedEdge || '',
         stairDirection: c.stairDirection || '',
-        campusId: c.campusId || '',
-        blockId: c.blockId || '',
-        floor: c.floor || ''
+        campusId,
+        blockId,
+        floor
       };
     }
   });
