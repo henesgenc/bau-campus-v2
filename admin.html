@@ -2356,8 +2356,8 @@
       if (e.target !== mapCanvas) return; // Only place on empty canvas
       
       const rect = mapCanvas.getBoundingClientRect();
-      const x = (e.clientX - rect.left - mapOffsetX) / mapScale;
-      const y = (e.clientY - rect.top - mapOffsetY) / mapScale;
+      const x = (e.clientX - rect.left) / mapScale;
+      const y = (e.clientY - rect.top) / mapScale;
       
       placeElement(activeTool, { x: Math.max(0, x), y: Math.max(0, y) });
       
@@ -2383,8 +2383,8 @@
       }
       
       const rect = mapCanvas.getBoundingClientRect();
-      const mouseX = (e.clientX - rect.left - mapOffsetX) / mapScale;
-      const mouseY = (e.clientY - rect.top - mapOffsetY) / mapScale;
+      const mouseX = (e.clientX - rect.left) / mapScale;
+      const mouseY = (e.clientY - rect.top) / mapScale;
       
       // Find which element and edge the mouse is near
       let newHoveredEdge = null;
@@ -2411,10 +2411,11 @@
           const minDist = Math.min(distTop, distRight, distBottom, distLeft);
           
           if (minDist <= EDGE_DETECTION_THRESHOLD) {
-            let edge = 'top';
-            if (minDist === distRight) edge = 'right';
+            let edge;
+            if (minDist === distTop) edge = 'top';
+            else if (minDist === distRight) edge = 'right';
             else if (minDist === distBottom) edge = 'bottom';
-            else if (minDist === distLeft) edge = 'left';
+            else edge = 'left';
             
             newHoveredEdge = { elementId: id, edge };
           }
