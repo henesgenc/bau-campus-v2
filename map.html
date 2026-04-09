@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="./logo.png" />
+  <title>Kat Planı — Bahçeşehir Üniversitesi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f0f2f7;
+      --surface: #fff;
+      --muted: #7a869a;
+      --text: #0f1923;
+      --border: #e2e6ed;
+      --primary: #1a56db;
+      --primary-soft: #e8effe;
+      --radius: 16px;
+      --shadow-sm: 0 1px 3px rgba(15,25,35,.07), 0 4px 12px rgba(15,25,35,.05);
+      --shadow-md: 0 4px 16px rgba(15,25,35,.09), 0 1px 3px rgba(15,25,35,.06);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(226,230,237,.8);
+      position: sticky; top: 0; z-index: 40;
+    }
+    .topbar-inner {
+      width: min(1320px, calc(100% - 40px));
+      margin: 0 auto;
+      height: 64px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    }
+    .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; }
+    .brand img { width: 34px; height: 34px; object-fit: contain; }
+    .brand-text h1 { font-size: 16px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; color: var(--text); }
+    .brand-text p  { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+    .nav { display: flex; gap: 6px; }
+    .nav a {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 13px; border-radius: 9px;
+      color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 600;
+      transition: background .15s, color .15s;
+    }
+    .nav a:hover  { background: #f1f3f8; color: var(--text); }
+    .nav a.active { background: var(--primary-soft); color: var(--primary); }
+
+    /* ── LAYOUT ── */
+    .layout {
+      width: min(1320px, calc(100% - 40px));
+      margin: 24px auto 60px;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar { display: flex; flex-direction: column; gap: 14px; }
+    .card {
+      background: #fff; border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    .card-head {
+      padding: 14px 18px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .04em;
+    }
+    .card-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+    label.field-label {
+      display: block; font-size: 11.5px; font-weight: 700;
+      color: #344054; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .03em;
+    }
+    select {
+      width: 100%; border: 1px solid var(--border); border-radius: 10px;
+      background: #f7f8fb; padding: 9px 32px 9px 11px; font-size: 13.5px;
+      font-family: 'DM Sans', sans-serif; outline: none; color: var(--text);
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b0b9c8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 9px center;
+      transition: border-color .15s, box-shadow .15s;
+      cursor: pointer;
+    }
+    select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,86,219,.1); background-color: #fff; }
+    select:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── SEARCH BOX (disabled/coming soon) ── */
+    .search-wrap { position: relative; }
+    .search-input {
+      width: 100%; border: 1px solid var(--border); border-radius: 10px;
+      background: #f7f8fb; padding: 9px 11px 9px 36px;
+      font-size: 13.5px; font-family: 'DM Sans', sans-serif; outline: none; color: var(--text);
+      transition: border-color .15s;
+    }
+    .search-input:disabled { opacity: 0.5; cursor: not-allowed; }
+    .search-icon {
+      position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+      color: #b0b9c8; font-size: 14px; pointer-events: none;
+    }
+    .search-soon {
+      margin-top: 6px;
+      font-size: 11.5px; color: var(--muted);
+      background: #f7f8fb; border: 1px dashed var(--border);
+      border-radius: 8px; padding: 7px 10px;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    /* ── INFO PANEL ── */
+    .info-empty {
+      padding: 20px 16px; text-align: center;
+      color: var(--muted); font-size: 13px; line-height: 1.6;
+    }
+    .info-empty .info-icon { font-size: 32px; display: block; margin-bottom: 8px; opacity: .5; }
+
+    .room-info { display: flex; flex-direction: column; gap: 0; }
+    .info-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0; border-bottom: 1px solid #f0f2f7; gap: 8px;
+      font-size: 13px;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-row span { color: var(--muted); font-weight: 600; white-space: nowrap; }
+    .info-row strong { text-align: right; font-weight: 700; color: var(--text); }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 700;
+    }
+    .badge-active   { background: #dcfae6; color: #067647; }
+    .badge-inactive { background: #fee4e2; color: #b42318; }
+
+    /* ── LEGEND ── */
+    .legend { display: flex; flex-direction: column; gap: 6px; }
+    .legend-row { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--muted); }
+    .legend-dot {
+      width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; border: 2px solid;
+    }
+
+    /* ── CANVAS AREA ── */
+    .canvas-wrap { display: flex; flex-direction: column; gap: 0; }
+
+    .map-topbar {
+      background: #fff; border: 1px solid var(--border);
+      border-radius: var(--radius) var(--radius) 0 0;
+      border-bottom: none;
+      padding: 12px 16px;
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .map-title { font-size: 14px; font-weight: 700; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .map-title span { color: var(--muted); font-weight: 500; }
+
+    .zoom-group { display: flex; align-items: center; gap: 4px; }
+    .zoom-btn {
+      width: 32px; height: 32px; border: 1px solid var(--border);
+      border-radius: 8px; background: #f7f8fb; cursor: pointer;
+      font-size: 16px; font-weight: 700; display: grid; place-items: center;
+      transition: background .12s;
+    }
+    .zoom-btn:hover { background: #eef0f6; }
+    .zoom-label { font-size: 12.5px; font-weight: 700; min-width: 40px; text-align: center; color: var(--muted); }
+
+    .map-outer {
+      background: #fff; border: 1px solid var(--border);
+      border-radius: 0 0 var(--radius) var(--radius);
+      overflow: hidden; position: relative;
+      height: calc(100vh - 180px);
+      min-height: 500px;
+      cursor: grab;
+    }
+    .map-outer:active { cursor: grabbing; }
+    .map-canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+
+    /* ── PLACEHOLDER ── */
+    .map-placeholder {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #f7f8fb;
+    }
+    .map-placeholder-inner { text-align: center; padding: 40px; max-width: 380px; }
+    .map-placeholder-inner .ph-icon { font-size: 56px; opacity: .25; margin-bottom: 16px; display: block; }
+    .map-placeholder-inner h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+    .map-placeholder-inner p { font-size: 13.5px; color: var(--muted); line-height: 1.7; }
+    .map-placeholder-inner .arrow-hint {
+      display: inline-flex; align-items: center; gap: 7px;
+      margin-top: 16px; padding: 9px 15px;
+      background: var(--primary-soft); color: var(--primary);
+      border-radius: 10px; font-size: 12.5px; font-weight: 700;
+    }
+
+    /* ── MAP ROOMS (same as admin) ── */
+    .map-room {
+      position: absolute; background: #e8effe; border: 2px solid #9db7f5;
+      border-radius: 6px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: #1a56db;
+      text-align: center; overflow: hidden;
+      cursor: pointer;
+      transition: box-shadow .12s, border-color .12s, transform .1s;
+      box-shadow: 0 1px 4px rgba(26,86,219,.12);
+      min-width: 40px; min-height: 30px;
+      user-select: none;
+    }
+    .map-room:hover { border-color: #1a56db; box-shadow: 0 2px 10px rgba(26,86,219,.22); transform: scale(1.03); z-index: 5; }
+    .map-room.highlighted {
+      border-color: #1a56db !important; background: #dbeaff !important;
+      box-shadow: 0 0 0 3px rgba(26,86,219,.25), 0 4px 16px rgba(26,86,219,.2) !important;
+      z-index: 10; animation: pulse 1.2s ease-in-out 2;
+    }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 3px rgba(26,86,219,.25); }
+      50%      { box-shadow: 0 0 0 7px rgba(26,86,219,.12); }
+    }
+    .map-room.inactive { background: #f5f5f5; border-color: #c8c8c8; color: #9a9a9a; }
+    .map-room .room-code { font-size: 11px; font-weight: 800; line-height: 1.2; }
+    .map-room .room-cap  { font-size: 9.5px; font-weight: 500; color: #5578c5; margin-top: 1px; }
+
+    .map-room.classroom  { background:#e8effe; border-color:#9db7f5; color:#1a56db; }
+    .map-room.corridor   { background:#e5e5e5; border-color:#a0a0a0; color:#5a5a5a; cursor:default; }
+    .map-room.corridor:hover { transform:none; }
+    .map-room.door, .map-room.doubleDoor { background:transparent; border:none; box-shadow:none; color:#5a4a2f; cursor:default; pointer-events:none; }
+    .map-room.toilet     { background:#d0e7ff; border-color:#5a9fd4; color:#2b5f85; cursor:default; }
+    .map-room.toilet:hover { transform:none; }
+    .map-room.office     { background:#fff3cd; border-color:#ffca28; color:#8b6914; cursor:default; }
+    .map-room.office:hover { transform:none; }
+    .map-room.stairs     { background:#e8d8ff; border-color:#9f7aea; color:#5a2f85; cursor:default; }
+    .map-room.stairs:hover { transform:none; }
+    .map-room.elevator   { background:#b8e8d8; border-color:#4a9f7a; color:#2f5a45; cursor:default; }
+    .map-room.elevator:hover { transform:none; }
+    .map-room.cafeteria  { background:#ffe4e1; border-color:#ff6b6b; color:#8b2f2f; cursor:default; }
+    .map-room.cafeteria:hover { transform:none; }
+    .map-room.library    { background:#e1f0ff; border-color:#6b9fff; color:#2f5f8b; cursor:default; }
+    .map-room.library:hover { transform:none; }
+    .map-room.lab        { background:#e8ffe1; border-color:#6bff9f; color:#2f8b5a; cursor:default; }
+    .map-room.lab:hover { transform:none; }
+    .map-room.storage    { background:#f5f5dc; border-color:#c8c8a0; color:#5a5a45; cursor:default; }
+    .map-room.storage:hover { transform:none; }
+
+    .stair-dir-arrow {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      font-size: 16px; font-weight: 900; pointer-events: none; line-height: 1;
+    }
+
+    /* ── LOADING ── */
+    .loading-overlay {
+      position: absolute; inset: 0; background: rgba(247,248,251,.85);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 20; border-radius: inherit;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: #1a56db; color: #fff; padding: 11px 22px; border-radius: 12px;
+      font-size: 13.5px; font-weight: 600; z-index: 999;
+      box-shadow: 0 8px 24px rgba(26,86,219,.3);
+      opacity: 0; transition: opacity .2s, transform .2s;
+      pointer-events: none; white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; }
+      .map-outer { height: 420px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="./index.html">
+      <img src="./logo.png" alt="BAU" />
+      <div class="brand-text">
+        <h1 id="brandTitle">Bahçeşehir Üniversitesi</h1>
+        <p id="brandSubtitle">Derslik Görselleri</p>
+      </div>
+    </a>
+    <nav class="nav">
+      <a href="./index.html">Ana Sayfa</a>
+      <a href="./map.html" class="active">🗺 Kat Planı</a>
+      <a href="./admin.html">Yönetim</a>
+    </nav>
+  </div>
+</header>
+
+<!-- MAIN LAYOUT -->
+<div class="layout">
+
+  <!-- ── LEFT SIDEBAR ── -->
+  <aside class="sidebar">
+
+    <!-- Filtrele -->
+    <div class="card">
+      <div class="card-head">📍 Filtrele</div>
+      <div class="card-body">
+        <div>
+          <label class="field-label">Kampüs</label>
+          <select id="campusSelect">
+            <option value="">— Kampüs Seçin —</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Blok</label>
+          <select id="blockSelect" disabled>
+            <option value="">— Önce Kampüs Seçin —</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Kat</label>
+          <select id="floorSelect" disabled>
+            <option value="">— Önce Blok Seçin —</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ara (devre dışı) -->
+    <div class="card">
+      <div class="card-head">🔍 Sınıf Ara</div>
+      <div class="card-body">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" type="text" placeholder="Örn: B201" disabled />
+        </div>
+        <div class="search-soon">
+          🚧 <span>Bu özellik yakında aktif olacak</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Seçili oda bilgisi -->
+    <div class="card" id="infoCard">
+      <div class="card-head">ℹ️ Bilgi</div>
+      <div class="card-body" id="infoBody">
+        <div class="info-empty">
+          <span class="info-icon">🪑</span>
+          Harita üzerindeki bir sınıfa tıklayın
+        </div>
+      </div>
+    </div>
+
+    <!-- Gösterge -->
+    <div class="card">
+      <div class="card-head">🎨 Gösterge</div>
+      <div class="card-body">
+        <div class="legend">
+          <div class="legend-row"><div class="legend-dot" style="background:#e8effe;border-color:#9db7f5"></div>Sınıf</div>
+          <div class="legend-row"><div class="legend-dot" style="background:#e5e5e5;border-color:#a0a0a0"></div>Koridor</div>
+          <div class="legend-row"><div class="legend-dot" style="background:#d0e7ff;border-color:#5a9fd4"></div>WC</div>
+          <div class="legend-row"><div class="legend-dot" style="background:#fff3cd;border-color:#ffca28"></div>Ofis</div>
+          <div class="legend-row"><div class="legend-dot" style="background:#e8d8ff;border-color:#9f7aea"></div>Merdiven</div>
+          <div class="legend-row"><div class="legend-dot" style="background:#b8e8d8;border-color:#4a9f7a"></div>Asansör</div>
+          <div class="legend-row"><div class="legend-dot" style="background:#ffe4e1;border-color:#ff6b6b"></div>Kafeterya</div>
+          <div class="legend-row"><div class="legend-dot" style="background:#e1f0ff;border-color:#6b9fff"></div>Kütüphane</div>
+          <div class="legend-row"><div class="legend-dot" style="background:#e8ffe1;border-color:#6bff9f"></div>Lab</div>
+          <div class="legend-row"><div class="legend-dot" style="background:#f5f5dc;border-color:#c8c8a0"></div>Depo</div>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ── CANVAS AREA ── -->
+  <div class="canvas-wrap">
+    <div class="map-topbar">
+      <div class="map-title" id="mapTitle">
+        <span>Kampüs ve kat seçin</span>
+      </div>
+      <div class="zoom-group">
+        <button class="zoom-btn" id="zoomOut" title="Uzaklaş">−</button>
+        <span class="zoom-label" id="zoomLabel">100%</span>
+        <button class="zoom-btn" id="zoomIn"  title="Yaklaş">+</button>
+        <button class="zoom-btn" id="zoomReset" title="Sıfırla" style="font-size:12px">↺</button>
+      </div>
+    </div>
+    <div class="map-outer" id="mapOuter">
+      <!-- Loading spinner -->
+      <div class="loading-overlay" id="loadingOverlay" style="display:none">
+        <div class="spinner"></div>
+      </div>
+
+      <!-- Placeholder -->
+      <div class="map-placeholder" id="mapPlaceholder">
+        <div class="map-placeholder-inner">
+          <span class="ph-icon">🗺️</span>
+          <h3>Kat Planını Görüntüle</h3>
+          <p>Başlamak için soldaki filtrelerden <strong>Kampüs</strong>, <strong>Blok</strong> ve <strong>Kat</strong> seçin.</p>
+          <div class="arrow-hint">← Soldaki "Filtrele" bölümünden başlayın</div>
+        </div>
+      </div>
+
+      <!-- Map canvas -->
+      <div id="mapCanvas" class="map-canvas" style="width:1200px;height:900px"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  import { db } from './firebase-config.js';
+  import {
+    collection, getDocs, getDoc, query, orderBy, doc
+  } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js';
+
+  // ── State ────────────────────────────────────────────────────────────────
+  const $ = id => document.getElementById(id);
+  let campuses = [], blocks = [], classrooms = [], blockFloors = [], settings = {};
+  let mapScale = 1, mapOffsetX = 0, mapOffsetY = 0;
+  let isPanning = false, panStartX = 0, panStartY = 0, panStartOX = 0, panStartOY = 0;
+
+  const ELEMENT_TYPES = {
+    classroom:  { icon: '🪑', label: 'Sınıf'      },
+    corridor:   { icon: '🛤',  label: 'Koridor'    },
+    door:       { icon: '🚪', label: 'Tek Kapı'    },
+    doubleDoor: { icon: '🚪🚪',label: 'Çift Kapı' },
+    toilet:     { icon: '🚺', label: 'WC'          },
+    office:     { icon: '💼', label: 'Ofis'        },
+    stairs:     { icon: '🪧', label: 'Merdiven'    },
+    elevator:   { icon: '🛗', label: 'Asansör'     },
+    cafeteria:  { icon: '☕', label: 'Kafeterya'   },
+    library:    { icon: '📚', label: 'Kütüphane'   },
+    lab:        { icon: '🧪', label: 'Lab'          },
+    storage:    { icon: '📦', label: 'Depo'         },
+  };
+
+  // ── Firestore Yükle ──────────────────────────────────────────────────────
+  async function loadAll() {
+    const [campusSnap, blockSnap, classroomSnap, floorSnap] = await Promise.all([
+      getDocs(query(collection(db, 'campuses'),    orderBy('name'))),
+      getDocs(query(collection(db, 'blocks'),      orderBy('name'))),
+      getDocs(query(collection(db, 'classrooms'),  orderBy('code'))),
+      getDocs(query(collection(db, 'blockFloors'), orderBy('sortOrder'))),
+    ]);
+    campuses   = campusSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a,b) => (a.sortOrder??9999)-(b.sortOrder??9999));
+    blocks     = blockSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a,b) => (a.sortOrder??9999)-(b.sortOrder??9999));
+    classrooms = classroomSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    blockFloors= floorSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    try {
+      const ss = await getDoc(doc(db, 'settings', 'site'));
+      settings = ss.exists() ? ss.data() : {};
+    } catch(e) { settings = {}; }
+
+    if (settings.title)    $('brandTitle').textContent    = settings.title;
+    if (settings.subtitle) $('brandSubtitle').textContent = settings.subtitle;
+
+    fillCampuses();
+  }
+
+  // ── Dropdownları Doldur ──────────────────────────────────────────────────
+  function fillCampuses() {
+    const sel = $('campusSelect');
+    sel.innerHTML = '<option value="">— Kampüs Seçin —</option>' +
+      campuses.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  }
+
+  $('campusSelect').addEventListener('change', () => {
+    const cid = $('campusSelect').value;
+    const blockSel = $('blockSelect'), floorSel = $('floorSelect');
+
+    floorSel.innerHTML = '<option value="">— Önce Blok Seçin —</option>';
+    floorSel.disabled = true;
+
+    if (cid) {
+      const filtered = blocks.filter(b => b.campusId === cid);
+      blockSel.innerHTML = '<option value="">— Blok Seçin —</option>' +
+        filtered.map(b => `<option value="${b.id}">${esc(b.name)}</option>`).join('');
+      blockSel.disabled = false;
+    } else {
+      blockSel.innerHTML = '<option value="">— Önce Kampüs Seçin —</option>';
+      blockSel.disabled = true;
+    }
+    clearMap();
+  });
+
+  $('blockSelect').addEventListener('change', () => {
+    const bid = $('blockSelect').value;
+    const floorSel = $('floorSelect');
+
+    if (bid) {
+      const floors = getFloorOptions(bid);
+      floorSel.innerHTML = '<option value="">— Kat Seçin —</option>' +
+        floors.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
+      floorSel.disabled = false;
+    } else {
+      floorSel.innerHTML = '<option value="">— Önce Blok Seçin —</option>';
+      floorSel.disabled = true;
+    }
+    clearMap();
+  });
+
+  $('floorSelect').addEventListener('change', () => {
+    const floor = $('floorSelect').value;
+    if (floor) renderMap();
+    else clearMap();
+  });
+
+  // ── Kat seçeneklerini hesapla ─────────────────────────────────────────────
+  function getFloorOptions(blockId) {
+    const managed = blockFloors
+      .filter(f => f.blockId === blockId)
+      .sort((a,b) => (a.sortOrder??9999)-(b.sortOrder??9999));
+    if (managed.length) return managed.map(f => f.name);
+
+    const block = blocks.find(b => b.id === blockId);
+    const options = [];
+    if (block && Number.isFinite(Number(block.floorCount))) {
+      const count = Math.max(0, Number(block.floorCount));
+      for (let i = 0; i <= count; i++) options.push(i === 0 ? 'Zemin Kat' : `${i}.Kat`);
+    }
+    // Ek: sınıflardan gelen kat değerleri
+    const seen = new Set(options);
+    classrooms.filter(c => c.blockId === blockId).forEach(c => {
+      const f = String(c.floor || c?.features?.floor || '').trim();
+      if (f && !seen.has(f)) { seen.add(f); options.push(f); }
+    });
+    return options;
+  }
+
+  // ── Haritayı Render Et ───────────────────────────────────────────────────
+  function renderMap() {
+    const cid   = $('campusSelect').value;
+    const bid   = $('blockSelect').value;
+    const floor = $('floorSelect').value;
+    if (!cid || !bid || !floor) return;
+
+    $('loadingOverlay').style.display = 'flex';
+    $('mapPlaceholder').style.display = 'none';
+
+    // Timeout: UI'nın render edilmesine izin ver
+    setTimeout(() => {
+      const campus = campuses.find(c => c.id === cid);
+      const block  = blocks.find(b => b.id === bid);
+
+      $('mapTitle').innerHTML = `
+        ${esc(campus?.name || '')}
+        <span>/ ${esc(block?.name || '')} /</span>
+        ${esc(floor)}
+      `;
+
+      // Bu kat + blok'a ait classrooms (mapX tanımlı olanlar)
+      const floorRooms = classrooms.filter(c => {
+        if (c.blockId !== bid) return false;
+        const cf = String(c.floor || c?.features?.floor || '').trim();
+        return cf === floor;
+      });
+
+      const canvas = $('mapCanvas');
+      canvas.innerHTML = '';
+
+      // Önce mapX'i olan elementleri yerleştir
+      let hasAny = false;
+      floorRooms.forEach(c => {
+        if (c.mapX === undefined) return;
+        hasAny = true;
+        renderElement({
+          id: c.id,
+          type: c.elementType || 'classroom',
+          x: c.mapX, y: c.mapY,
+          w: c.mapW || 80, h: c.mapH || 56,
+          shapes: c.shapes || [],
+          rotation: c.rotation || 0,
+          label: c.label || c.code || '',
+          stairDirection: c.stairDirection || '',
+          attachedTo: c.attachedTo || '',
+          attachedEdge: c.attachedEdge || '',
+          classroomData: c,
+        });
+      });
+
+      // Ayrıca non-classroom elementler (door, corridor, vb.) — aynı blok+kat
+      const extraElements = classrooms.filter(c => {
+        if (c.mapX === undefined) return false;
+        if (c.elementType === 'classroom' || !c.elementType) return false;
+        if (c.blockId !== bid) return false;
+        const cf = String(c.floor || '').trim();
+        return cf === floor;
+      });
+      // (bunlar zaten floorRooms içinde çünkü blockId+floor filtresine giriyor)
+      // Ama non-classroom olanlar için yukarıdaki loop zaten çalışıyor.
+
+      $('loadingOverlay').style.display = 'none';
+
+      if (!hasAny) {
+        showToast('Bu kat için henüz harita oluşturulmamış.');
+        $('mapPlaceholder').innerHTML = `
+          <div class="map-placeholder-inner">
+            <span class="ph-icon">📭</span>
+            <h3>Harita Bulunamadı</h3>
+            <p>Bu kat için henüz bir kat planı oluşturulmamış.</p>
+          </div>`;
+        $('mapPlaceholder').style.display = 'flex';
+      }
+    }, 30);
+  }
+
+  // ── Tek Element Render ───────────────────────────────────────────────────
+  function renderElement(d) {
+    const el = document.createElement('div');
+    const type = d.type || 'classroom';
+    el.className = 'map-room ' + type + (d.classroomData?.active === false ? ' inactive' : '');
+    el.dataset.id = d.id;
+
+    const rotationTransform = d.rotation ? `rotate(${d.rotation}deg)` : '';
+
+    if (d.shapes && d.shapes.length > 0) {
+      // Multi-shape
+      el.style.cssText = `left:${d.x}px;top:${d.y}px;width:auto;height:auto;background:transparent;border:none;box-shadow:none;`;
+      d.shapes.forEach(shape => {
+        const sd = document.createElement('div');
+        sd.className = 'map-room ' + type;
+        sd.style.cssText = `position:absolute;left:${shape.offsetX||0}px;top:${shape.offsetY||0}px;width:${shape.w||40}px;height:${shape.h||30}px;`;
+        if (rotationTransform) sd.style.transform = rotationTransform;
+        el.appendChild(sd);
+      });
+      const ld = document.createElement('div');
+      ld.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:10;';
+      ld.innerHTML = `<span class="room-code">${esc(d.label || ELEMENT_TYPES[type]?.icon || '')}</span>`;
+      el.appendChild(ld);
+
+    } else if (type === 'door' || type === 'doubleDoor') {
+      el.style.cssText = `left:${d.x}px;top:${d.y}px;width:${d.w}px;height:${d.h}px;transform-origin:center center;transform:${rotationTransform};`;
+      renderDoorSVG(el, d, type);
+
+    } else {
+      el.style.cssText = `left:${d.x}px;top:${d.y}px;width:${d.w}px;height:${d.h}px;transform-origin:center center;transform:${rotationTransform};`;
+
+      if (type === 'classroom' && d.classroomData) {
+        const c = d.classroomData;
+        el.innerHTML = `
+          <span class="room-code">${esc(c.code || c.id)}</span>
+          ${c.capacity ? `<span class="room-cap">${c.capacity} kişi</span>` : ''}
+        `;
+        // Sınıfa tıklanınca bilgi göster
+        el.addEventListener('click', e => { e.stopPropagation(); showRoomInfo(c); });
+      } else {
+        const typeInfo = ELEMENT_TYPES[type] || {};
+        el.innerHTML = `<span class="room-code">${typeInfo.icon || ''}${esc(d.label || typeInfo.label || '')}</span>`;
+
+        // Merdiven yön oku
+        if (type === 'stairs' && d.stairDirection) {
+          const arrow = document.createElement('span');
+          arrow.className = 'stair-dir-arrow';
+          arrow.textContent = d.stairDirection === 'up' ? '▲' : d.stairDirection === 'down' ? '▼' : '⬍';
+          el.appendChild(arrow);
+        }
+      }
+    }
+
+    $('mapCanvas').appendChild(el);
+  }
+
+  // ── Kapı SVG ─────────────────────────────────────────────────────────────
+  function renderDoorSVG(el, d, type) {
+    const isDouble = type === 'doubleDoor';
+    const W = d.w, H = d.h;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', W); svg.setAttribute('height', H);
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.style.cssText = 'position:absolute;top:0;left:0;overflow:visible;pointer-events:none;';
+
+    const edge = d.attachedEdge || (W > H ? 'bottom' : 'right');
+    const mkP = da => {
+      const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      p.setAttribute('d', da); p.setAttribute('stroke','#a67c52'); p.setAttribute('stroke-width','1.5');
+      p.setAttribute('fill','rgba(166,124,82,0.08)'); p.setAttribute('stroke-dasharray','3,2'); p.setAttribute('opacity','0.75');
+      return p;
+    };
+    const mkL = (x1,y1,x2,y2) => {
+      const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      l.setAttribute('x1',x1); l.setAttribute('y1',y1); l.setAttribute('x2',x2); l.setAttribute('y2',y2);
+      l.setAttribute('stroke','#8b6f47'); l.setAttribute('stroke-width','4'); l.setAttribute('stroke-linecap','round');
+      return l;
+    };
+    if (edge==='bottom') {
+      svg.appendChild(mkL(0,0,W,0));
+      if(isDouble){const r=W/2;svg.appendChild(mkP(`M 0 0 L 0 ${r} A ${r} ${r} 0 0 0 ${W/2} 0`));svg.appendChild(mkP(`M ${W} 0 L ${W} ${r} A ${r} ${r} 0 0 1 ${W/2} 0`));}
+      else{const r=W*.9;svg.appendChild(mkP(`M 0 0 L 0 ${r} A ${r} ${r} 0 0 0 ${r} 0`));}
+    } else if (edge==='top') {
+      svg.appendChild(mkL(0,H,W,H));
+      if(isDouble){const r=W/2;svg.appendChild(mkP(`M 0 ${H} L 0 ${H-r} A ${r} ${r} 0 0 1 ${W/2} ${H}`));svg.appendChild(mkP(`M ${W} ${H} L ${W} ${H-r} A ${r} ${r} 0 0 0 ${W/2} ${H}`));}
+      else{const r=W*.9;svg.appendChild(mkP(`M 0 ${H} L 0 ${H-r} A ${r} ${r} 0 0 1 ${r} ${H}`));}
+    } else if (edge==='right') {
+      svg.appendChild(mkL(0,0,0,H));
+      if(isDouble){const r=H/2;svg.appendChild(mkP(`M 0 0 L ${r} 0 A ${r} ${r} 0 0 0 0 ${H/2}`));svg.appendChild(mkP(`M 0 ${H} L ${r} ${H} A ${r} ${r} 0 0 1 0 ${H/2}`));}
+      else{const r=H*.9;svg.appendChild(mkP(`M 0 0 L ${r} 0 A ${r} ${r} 0 0 0 0 ${r}`));}
+    } else {
+      svg.appendChild(mkL(W,0,W,H));
+      if(isDouble){const r=H/2;svg.appendChild(mkP(`M ${W} 0 L ${W-r} 0 A ${r} ${r} 0 0 1 ${W} ${H/2}`));svg.appendChild(mkP(`M ${W} ${H} L ${W-r} ${H} A ${r} ${r} 0 0 0 ${W} ${H/2}`));}
+      else{const r=H*.9;svg.appendChild(mkP(`M ${W} 0 L ${W-r} 0 A ${r} ${r} 0 0 1 ${W} ${r}`));}
+    }
+    el.appendChild(svg);
+  }
+
+  // ── Sınıf Bilgisi ─────────────────────────────────────────────────────────
+  function showRoomInfo(c) {
+    // Önceki highlight'ı kaldır
+    document.querySelectorAll('.map-room.highlighted').forEach(el => el.classList.remove('highlighted'));
+    // Seçili sınıfı highlight et
+    const el = $('mapCanvas').querySelector(`[data-id="${c.id}"]`);
+    if (el) el.classList.add('highlighted');
+
+    const floor = String(c.floor || c?.features?.floor || '').trim() || '—';
+    const feats = Array.isArray(c.featureList) ? c.featureList
+      : Array.isArray(c.features?.items) ? c.features.items
+      : typeof c.features === 'string' ? c.features.split(',').map(x=>x.trim()).filter(Boolean)
+      : [];
+
+    $('infoBody').innerHTML = `
+      <div class="room-info">
+        <div class="info-row">
+          <span>Kod</span>
+          <strong>${esc(c.code || c.id)}</strong>
+        </div>
+        <div class="info-row">
+          <span>Durum</span>
+          <strong>
+            <span class="badge ${c.active !== false ? 'badge-active' : 'badge-inactive'}">
+              ${c.active !== false ? '✓ Aktif' : '✗ Pasif'}
+            </span>
+          </strong>
+        </div>
+        ${c.capacity ? `
+        <div class="info-row">
+          <span>Kapasite</span>
+          <strong>${c.capacity} kişi</strong>
+        </div>` : ''}
+        <div class="info-row">
+          <span>Kat</span>
+          <strong>${esc(floor)}</strong>
+        </div>
+        ${c.type ? `
+        <div class="info-row">
+          <span>Tür</span>
+          <strong>${esc(c.type)}</strong>
+        </div>` : ''}
+        ${feats.length ? `
+        <div class="info-row" style="align-items:flex-start">
+          <span>Özellikler</span>
+          <strong style="text-align:right">${feats.map(f => esc(f)).join('<br>')}</strong>
+        </div>` : ''}
+      </div>
+    `;
+  }
+
+  // ── Canvas tıklaması (highlight kaldır) ──────────────────────────────────
+  $('mapCanvas').addEventListener('click', () => {
+    document.querySelectorAll('.map-room.highlighted').forEach(el => el.classList.remove('highlighted'));
+    $('infoBody').innerHTML = `<div class="info-empty"><span class="info-icon">🪑</span>Harita üzerindeki bir sınıfa tıklayın</div>`;
+  });
+
+  // ── Haritayı Temizle ─────────────────────────────────────────────────────
+  function clearMap() {
+    $('mapCanvas').innerHTML = '';
+    $('mapPlaceholder').innerHTML = `
+      <div class="map-placeholder-inner">
+        <span class="ph-icon">🗺️</span>
+        <h3>Kat Planını Görüntüle</h3>
+        <p>Başlamak için soldaki filtrelerden <strong>Kampüs</strong>, <strong>Blok</strong> ve <strong>Kat</strong> seçin.</p>
+        <div class="arrow-hint">← Soldaki "Filtrele" bölümünden başlayın</div>
+      </div>`;
+    $('mapPlaceholder').style.display = 'flex';
+    $('mapTitle').innerHTML = '<span>Kampüs ve kat seçin</span>';
+    $('infoBody').innerHTML = `<div class="info-empty"><span class="info-icon">🪑</span>Harita üzerindeki bir sınıfa tıklayın</div>`;
+    resetTransform();
+  }
+
+  // ── Zoom ─────────────────────────────────────────────────────────────────
+  function applyTransform() {
+    $('mapCanvas').style.transform = `translate(${mapOffsetX}px,${mapOffsetY}px) scale(${mapScale})`;
+    $('zoomLabel').textContent = Math.round(mapScale * 100) + '%';
+  }
+  function resetTransform() {
+    mapScale = 1; mapOffsetX = 0; mapOffsetY = 0; applyTransform();
+  }
+  $('zoomIn').addEventListener('click',    () => { mapScale = Math.min(3, mapScale + 0.1);  applyTransform(); });
+  $('zoomOut').addEventListener('click',   () => { mapScale = Math.max(0.2, mapScale - 0.1); applyTransform(); });
+  $('zoomReset').addEventListener('click', () => resetTransform());
+
+  $('mapOuter').addEventListener('wheel', e => {
+    e.preventDefault();
+    mapScale = Math.max(0.2, Math.min(3, mapScale + (e.deltaY < 0 ? 0.08 : -0.08)));
+    applyTransform();
+  }, { passive: false });
+
+  // ── Pan ───────────────────────────────────────────────────────────────────
+  $('mapOuter').addEventListener('mousedown', e => {
+    isPanning = true;
+    panStartX = e.clientX; panStartY = e.clientY;
+    panStartOX = mapOffsetX; panStartOY = mapOffsetY;
+  });
+  window.addEventListener('mousemove', e => {
+    if (!isPanning) return;
+    mapOffsetX = panStartOX + (e.clientX - panStartX);
+    mapOffsetY = panStartOY + (e.clientY - panStartY);
+    applyTransform();
+  });
+  window.addEventListener('mouseup', () => { isPanning = false; });
+
+  // ── Toast ─────────────────────────────────────────────────────────────────
+  function showToast(msg, duration = 3000) {
+    const t = $('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), duration);
+  }
+
+  // ── Yardımcı ─────────────────────────────────────────────────────────────
+  function esc(str = '') {
+    return String(str).replace(/[&<>"']/g, m =>
+      ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m]));
+  }
+
+  // ── Başlat ────────────────────────────────────────────────────────────────
+  $('loadingOverlay').style.display = 'flex';
+  loadAll().finally(() => { $('loadingOverlay').style.display = 'none'; });
+</script>
+</body>
+</html>
