@@ -856,7 +856,7 @@ $('mapSaveAllBtn').addEventListener('click', async () => {
   btn.disabled = true; btn.textContent = 'Kaydediliyor...';
   try {
     const batch = writeBatch(db);
-    let saveCount = 0, newCount = 0;
+    let saveCount = 0, newCount = 0, removeCount = 0;
 
     // Önce temp_ ID'li yeni elementleri kaydet
     const tempElements = Object.entries(mapData).filter(([id]) => id.startsWith('temp_'));
@@ -876,6 +876,42 @@ $('mapSaveAllBtn').addEventListener('click', async () => {
       Object.values(mapData).forEach(door => { if (door.attachedTo === tempId) door.attachedTo = newDocRef.id; });
       newCount++;
     }
+
+    // Haritadan silinen derslikleri bul (Firestore'da mapX var ama mapData'da yok)
+    const currentCampusId = $('mapCampusFilter').value;
+    const currentBlockId = $('mapBlockFilter').value;
+    const currentFloor = $('mapFloorSelect').value;
+    
+    getClassrooms().forEach(c => {
+      // Eğer bu dersliğin harita bilgisi var ama mapData'da yoksa
+      if (c.mapX !== undefined && !mapData[c.id]) {
+        // Sadece şu an seçili olan kampüs/blok/kat'taki silmeleri kaydet
+        const selectedCampus = currentCampusId ? getCampuses().find(cp => cp.id === currentCampusId) : null;
+        const selectedBlock = currentBlockId ? getBlocks().find(b => b.id === currentBlockId) : null;
+        
+        const isInCurrentFilter = 
+          (c.campusId === currentCampusId || (selectedCampus && (c.campus === selectedCampus.name || c.campusName === selectedCampus.name))) &&
+          (c.blockId === currentBlockId || (selectedBlock && (c.building === selectedBlock.name || c.blockName === selectedBlock.name))) &&
+          (getClassroomFloorValue(c) === currentFloor);
+        
+        if (isInCurrentFilter) {
+          // Harita bilgilerini temizle
+          batch.update(doc(db, 'classrooms', c.id), {
+            mapX: null,
+            mapY: null,
+            mapW: null,
+            mapH: null,
+            shapes: [],
+            rotation: 0,
+            attachedTo: '',
+            attachedEdge: '',
+            stairDirection: '',
+            mapUpdatedAt: serverTimestamp()
+          });
+          removeCount++;
+        }
+      }
+    });
 
     // Mevcut elementleri güncelle
     Object.entries(mapData).forEach(([id, pos]) => {
@@ -908,7 +944,10 @@ $('mapSaveAllBtn').addEventListener('click', async () => {
 
     await loadAll();
     renderMapPanel();
-    btn.textContent = `✓ Kaydedildi (${saveCount} güncellendi, ${newCount} yeni)`;
+    const msg = removeCount > 0 
+      ? `✓ Kaydedildi (${saveCount} güncellendi, ${newCount} yeni, ${removeCount} kaldırıldı)`
+      : `✓ Kaydedildi (${saveCount} güncellendi, ${newCount} yeni)`;
+    btn.textContent = msg;
     btn.style.background = 'var(--success)';
     setTimeout(() => { btn.textContent = old; btn.style.background = ''; btn.disabled = false; }, 2500);
   } catch (e) {
