@@ -6,7 +6,7 @@ import {
   collection, addDoc, updateDoc, doc, serverTimestamp, writeBatch
 } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js';
 
-import { $, escapeHtml, classrooms } from './admin-state.js';
+import { $, escapeHtml, getClassrooms, getBlocks, getCampuses, getBlockFloors } from './admin-state.js';
 import { getClassroomFloorValue, getFloorOptionsForBlock, loadAll } from './admin-core.js';
 
 // ── Element Tipi Tanımları ─────────────────────────────────────────────────
@@ -48,10 +48,8 @@ const mapUnplacedList = $('mapUnplacedList');
 // ── Export edilen fonksiyonlar (admin-core ve admin-auth tarafından çağrılır)
 export function fillMapCampusFilter() {
   const sel = $('mapCampusFilter');
-  // classrooms'a erişim için admin-state'ten al
-  const { campuses, blocks } = getSharedState();
   sel.innerHTML = '<option value="">— Kampüs Seç —</option>' +
-    campuses.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+    getCampuses().map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
   const blockSel = $('mapBlockFilter');
   const floorSel = $('mapFloorSelect');
   blockSel.innerHTML = '<option value="">— Önce Kampüs Seçin —</option>';
@@ -87,7 +85,7 @@ export function updateMapUIState() {
 }
 
 export function loadMapPositions() {
-  classrooms.forEach(c => {
+  getClassrooms().forEach(c => {
     if (c.mapX !== undefined) {
       mapData[c.id] = {
         id: c.id,
@@ -147,20 +145,13 @@ export function renderMapPanel() {
   mapCanvas.innerHTML = '';
   placed.forEach(c => renderRoomEl(c));
   placedElements.forEach(d => {
-    if (d.type && d.type !== 'classroom' && !classrooms.some(c => c.id === d.id)) {
+    if (d.type && d.type !== 'classroom' && !getClassrooms().some(c => c.id === d.id)) {
       renderMapElement(d.id, d, null);
     }
   });
 }
 
 // ── İç yardımcı: paylaşılan state erişimi ─────────────────────────────────
-function getSharedState() {
-  // admin-state modülünden canlı değerleri çekiyoruz
-  // Bu import'lar dosya yüklendiğinde binding oluşturulur; güncel değeri okur
-  const stateModule = window.__adminState;
-  return stateModule || { campuses: [], blocks: [] };
-}
-
 // ── Zoom ───────────────────────────────────────────────────────────────────
 function applyCanvasTransform() {
   mapCanvas.style.transform = `translate(${mapOffsetX}px,${mapOffsetY}px) scale(${mapScale})`;
@@ -199,11 +190,10 @@ window.addEventListener('mouseup', () => { isPanning = false; mapOuter.classList
 $('mapCampusFilter').addEventListener('change', () => {
   const cid = $('mapCampusFilter').value;
   const blockSel = $('mapBlockFilter'), floorSel = $('mapFloorSelect');
-  const { blocks } = getSharedState();
   floorSel.innerHTML = '<option value="">— Önce Blok Seçin —</option>';
   floorSel.disabled = true; floorSel.style.opacity = '0.5'; floorSel.style.cursor = 'not-allowed';
   if (cid) {
-    const filtered = blocks.filter(b => b.campusId === cid);
+    const filtered = getBlocks().filter(b => b.campusId === cid);
     blockSel.innerHTML = '<option value="">— Blok Seçin —</option>' +
       filtered.map(b => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
     blockSel.disabled = false; blockSel.style.opacity = '1'; blockSel.style.cursor = 'pointer';
@@ -348,7 +338,7 @@ function placeDoorOnEdge(parentElementId, edge, doorType = 'door') {
 // ── Sınıf & Element Yerleştirme ────────────────────────────────────────────
 function placeClassroom(id) {
   if (mapData[id]) return;
-  const c = classrooms.find(x => x.id === id);
+  const c = getClassrooms().find(x => x.id === id);
   if (!c) return;
   const type = c.elementType || 'classroom';
   const defaults = ELEMENT_TYPES[type] || ELEMENT_TYPES.classroom;
@@ -394,7 +384,7 @@ function snapDoorToStructure(x, y, w, h) {
 // ── Filtrelenmiş sınıflar ──────────────────────────────────────────────────
 function getFilteredClassrooms() {
   const cid = $('mapCampusFilter').value, bid = $('mapBlockFilter').value, floor = $('mapFloorSelect').value;
-  return classrooms.filter(c => {
+  return getClassrooms().filter(c => {
     if (cid && c.campusId !== cid) return false;
     if (bid && c.blockId  !== bid) return false;
     const cf = getClassroomFloorValue(c);
@@ -526,7 +516,7 @@ function renderMapElement(id, d, c) {
 function selectRoom(id) {
   mapSelectedId = id;
   mapCanvas.querySelectorAll('.map-room').forEach(el => el.classList.toggle('selected', el.dataset.id === id));
-  const c = classrooms.find(x => x.id === id);
+  const c = getClassrooms().find(x => x.id === id);
   const d = mapData[id];
   if (!d) { mapInfoCard.style.display = 'none'; return; }
   mapInfoCard.style.display = 'block';
@@ -551,7 +541,7 @@ function selectRoom(id) {
     }
     if ((d.type === 'door' || d.type === 'doubleDoor') && d.attachedTo) {
       const attachedElement = mapData[d.attachedTo];
-      const attachedClassroom = classrooms.find(c => c.id === d.attachedTo);
+      const attachedClassroom = getClassrooms().find(c => c.id === d.attachedTo);
       const attachedName = attachedClassroom ? attachedClassroom.code : (attachedElement?.label || d.attachedTo);
       const edgeNames = { top: 'Üst', right: 'Sağ', bottom: 'Alt', left: 'Sol' };
       infoHTML += `

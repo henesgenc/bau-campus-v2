@@ -12,8 +12,8 @@ import {
 
 import {
   $, showStatus, clearStatus, escapeHtml,
-  campuses, blocks, classrooms, classroomTypes, blockFloors, settings,
-  setState
+  setState,
+  getClassrooms, getBlocks, getCampuses, getBlockFloors, getSettings, getClassroomTypes
 } from './admin-state.js';
 
 import { fillMapCampusFilter, renderMapPanel, loadMapPositions, updateMapUIState } from './admin-map.js';
@@ -109,7 +109,7 @@ export function getClassroomFloorValue(c) {
 }
 
 function getManagedFloorsForBlock(blockId) {
-  return blockFloors
+  return getBlockFloors()
     .filter(f => f.blockId === blockId)
     .sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999) || (a.name || '').localeCompare(b.name || '', 'tr'));
 }
@@ -128,14 +128,14 @@ export function getFloorOptionsForBlock(blockId, extraValues = []) {
   if (managed.length) {
     managed.forEach(f => push(f.name));
   } else {
-    const block = blocks.find(b => b.id === blockId);
+    const block = getBlocks().find(b => b.id === blockId);
     if (block && Number.isFinite(Number(block.floorCount))) {
       const count = Math.max(0, Number(block.floorCount));
       for (let f = 0; f <= count; f++) push(f === 0 ? 'Zemin Kat' : `${f}.Kat`);
     }
   }
 
-  classrooms.filter(c => c.blockId === blockId).map(c => getClassroomFloorValue(c)).forEach(push);
+  getClassrooms().filter(c => c.blockId === blockId).map(c => getClassroomFloorValue(c)).forEach(push);
   extraValues.forEach(push);
 
   return values.sort((a, b) => {
@@ -162,11 +162,11 @@ export function fillClassroomFloorSelect(blockId, selectedValue = '') {
 }
 
 export function fillCampusSelect(selectId) {
-  $(selectId).innerHTML = campuses.map(c => `<option value="${c.id}">${escapeHtml(c.name || '')}</option>`).join('');
+  $(selectId).innerHTML = getCampuses().map(c => `<option value="${c.id}">${escapeHtml(c.name || '')}</option>`).join('');
 }
 
 export function fillBlockSelect(selectId, campusId) {
-  const filtered = blocks.filter(b => !campusId || b.campusId === campusId);
+  const filtered = getBlocks().filter(b => !campusId || b.campusId === campusId);
   $(selectId).innerHTML = filtered.map(b => `<option value="${b.id}">${escapeHtml(b.name || '')}</option>`).join('');
 }
 
@@ -335,29 +335,29 @@ export async function loadAll() {
   fillClassroomTypeSelect();
   loadMapPositions();
   if (currentTab === 'map') { fillMapCampusFilter(); renderMapPanel(); }
-  $('brandTitle').textContent = settings.title || 'Bahçeşehir Üniversitesi Derslikleri';
-  $('brandSubtitle').textContent = settings.subtitle || 'Derslik Görselleri';
+  $('brandTitle').textContent = getSettings().title || 'Bahçeşehir Üniversitesi Derslikleri';
+  $('brandSubtitle').textContent = getSettings().subtitle || 'Derslik Görselleri';
 }
 
 // ── Render fonksiyonları ───────────────────────────────────────────────────
 function renderCounts() {
-  $('campusCount').textContent = campuses.length;
-  $('blockCount').textContent = blocks.length;
-  $('classroomCount').textContent = classrooms.filter(c => c.active !== false).length;
-  $('typeCount').textContent = classroomTypes.length;
-  $('floorCount').textContent = blockFloors.length;
+  $('campusCount').textContent = getCampuses().length;
+  $('blockCount').textContent = getBlocks().length;
+  $('classroomCount').textContent = getClassrooms().filter(c => c.active !== false).length;
+  $('typeCount').textContent = getClassroomTypes().length;
+  $('floorCount').textContent = getBlockFloors().length;
 }
 
 function renderCampuses() {
   const list = $('campusList');
-  if (!campuses.length) { list.innerHTML = `<div class="empty">Henüz kampüs eklenmemiş.</div>`; return; }
-  list.innerHTML = campuses.map(c => `
+  if (!getCampuses().length) { list.innerHTML = `<div class="empty">Henüz kampüs eklenmemiş.</div>`; return; }
+  list.innerHTML = getCampuses().map(c => `
     <article class="item">
       <div class="item-left">
         ${c.imageUrl ? `<img class="thumb" src="${c.imageUrl}" alt="">` : `<div class="thumb placeholder">🏫</div>`}
         <div class="item-body">
           <h3 class="item-title">${escapeHtml(c.name || '')}</h3>
-          <div class="item-meta">${blocks.filter(b => b.campusId === c.id).length} blok</div>
+          <div class="item-meta">${getBlocks().filter(b => b.campusId === c.id).length} blok</div>
         </div>
       </div>
       <div class="item-actions">
@@ -371,14 +371,14 @@ function renderCampuses() {
 
 function renderBlocks() {
   const list = $('blockList');
-  if (!blocks.length) { list.innerHTML = `<div class="empty">Henüz blok eklenmemiş.</div>`; return; }
-  list.innerHTML = blocks.map(b => `
+  if (!getBlocks().length) { list.innerHTML = `<div class="empty">Henüz blok eklenmemiş.</div>`; return; }
+  list.innerHTML = getBlocks().map(b => `
     <article class="item">
       <div class="item-left">
         ${b.imageUrl ? `<img class="thumb" src="${b.imageUrl}" alt="">` : `<div class="thumb placeholder">🏢</div>`}
         <div class="item-body">
           <h3 class="item-title">${escapeHtml(b.name || '')}</h3>
-          <div class="item-meta">${escapeHtml(b.campusName || '-')} • ${classrooms.filter(c => c.blockId === b.id).length} sınıf • ${Number(b.floorCount || 0)} kat</div>
+          <div class="item-meta">${escapeHtml(b.campusName || '-')} • ${getClassrooms().filter(c => c.blockId === b.id).length} sınıf • ${Number(b.floorCount || 0)} kat</div>
         </div>
       </div>
       <div class="item-actions">
@@ -392,7 +392,7 @@ function renderBlocks() {
 
 function renderClassrooms() {
   const q = $('classroomSearch').value.trim().toLowerCase();
-  const filtered = classrooms.filter(c => {
+  const filtered = getClassrooms().filter(c => {
     const text = `${c.code || ''} ${c.blockName || ''} ${getClassroomFloorValue(c) || ''} ${c.campusName || ''}`.toLowerCase();
     return text.includes(q);
   });
@@ -420,10 +420,10 @@ function wireListActions() {
   document.querySelectorAll('[data-type]').forEach(btn => {
     btn.onclick = () => {
       const type = btn.dataset.type, id = btn.dataset.id;
-      if (type === 'campus')    openModal('campus', campuses.find(x => x.id === id));
-      if (type === 'block')     openModal('block', blocks.find(x => x.id === id));
-      if (type === 'classroom') openModal('classroom', classrooms.find(x => x.id === id));
-      if (type === 'floor')     openModal('floor', blockFloors.find(x => x.id === id));
+      if (type === 'campus')    openModal('campus', getCampuses().find(x => x.id === id));
+      if (type === 'block')     openModal('block', getBlocks().find(x => x.id === id));
+      if (type === 'classroom') openModal('classroom', getClassrooms().find(x => x.id === id));
+      if (type === 'floor')     openModal('floor', getBlockFloors().find(x => x.id === id));
     };
   });
   document.querySelectorAll('[data-del-type]').forEach(btn => {
@@ -434,29 +434,29 @@ function wireListActions() {
 // ── CRUD ───────────────────────────────────────────────────────────────────
 async function handleDelete(type, id) {
   if (type === 'campus') {
-    if (blocks.some(b => b.campusId === id)) { alert('Önce bu kampüse bağlı blokları silin.'); return; }
-    const item = campuses.find(x => x.id === id);
+    if (getBlocks().some(b => b.campusId === id)) { alert('Önce bu kampüse bağlı blokları silin.'); return; }
+    const item = getCampuses().find(x => x.id === id);
     if (!confirm('Kampüs silinsin mi?')) return;
     await deleteImageIfPossible(item.imageObject);
     await deleteDoc(doc(db, 'campuses', id));
   }
   if (type === 'block') {
-    if (classrooms.some(c => c.blockId === id)) { alert('Önce bu bloğa bağlı sınıfları silin.'); return; }
-    const item = blocks.find(x => x.id === id);
+    if (getClassrooms().some(c => c.blockId === id)) { alert('Önce bu bloğa bağlı sınıfları silin.'); return; }
+    const item = getBlocks().find(x => x.id === id);
     if (!confirm('Blok silinsin mi?')) return;
     await deleteImageIfPossible(item.imageObject);
     await deleteDoc(doc(db, 'blocks', id));
   }
   if (type === 'classroom') {
-    const item = classrooms.find(x => x.id === id);
+    const item = getClassrooms().find(x => x.id === id);
     if (!confirm('Sınıf silinsin mi?')) return;
     for (const img of (item.imageObjects || [])) await deleteImageIfPossible(img);
     await deleteDoc(doc(db, 'classrooms', id));
   }
   if (type === 'floor') {
-    const item = blockFloors.find(x => x.id === id);
+    const item = getBlockFloors().find(x => x.id === id);
     if (!item) return;
-    const used = classrooms.some(c => c.blockId === item.blockId && getClassroomFloorValue(c) === item.name);
+    const used = getClassrooms().some(c => c.blockId === item.blockId && getClassroomFloorValue(c) === item.name);
     if (used) { alert('Bu kat sınıflarda kullanıldığı için silinemez. Önce sınıfları başka kata taşıyın.'); return; }
     if (!confirm('Kat silinsin mi?')) return;
     await deleteDoc(doc(db, 'blockFloors', id));
@@ -471,7 +471,7 @@ async function saveCampus() {
   if (currentImageObject?.file) imageObject = await uploadFile(`campuses/${Date.now()}-${currentImageObject.file.name}`, currentImageObject.file);
   const payload = { name, sortOrder: $('campusSortOrder').value !== '' ? Number($('campusSortOrder').value) : null, imageUrl: imageObject?.url || '', imageObject, updatedAt: serverTimestamp() };
   if (editingId) {
-    const old = campuses.find(x => x.id === editingId);
+    const old = getCampuses().find(x => x.id === editingId);
     if (currentImageObject?.file && old?.imageObject?.path) await deleteImageIfPossible(old.imageObject);
     await updateDoc(doc(db, 'campuses', editingId), payload);
   } else {
@@ -483,13 +483,13 @@ async function saveCampus() {
 async function saveBlock() {
   const name = $('blockName').value.trim();
   const campusId = $('blockCampusId').value;
-  const campus = campuses.find(c => c.id === campusId);
+  const campus = getCampuses().find(c => c.id === campusId);
   if (!name || !campusId) return showStatus($('modalStatus'), 'Blok adı ve kampüs zorunlu.', 'error');
   let imageObject = currentImageObject && !currentImageObject.file ? currentImageObject : null;
   if (currentImageObject?.file) imageObject = await uploadFile(`blocks/${Date.now()}-${currentImageObject.file.name}`, currentImageObject.file);
   const payload = { name, campusId, campusName: campus?.name || '', floorCount: Number($('blockFloorCount').value || 0), sortOrder: $('blockSortOrder').value !== '' ? Number($('blockSortOrder').value) : null, imageUrl: imageObject?.url || '', imageObject, updatedAt: serverTimestamp() };
   if (editingId) {
-    const old = blocks.find(x => x.id === editingId);
+    const old = getBlocks().find(x => x.id === editingId);
     if (currentImageObject?.file && old?.imageObject?.path) await deleteImageIfPossible(old.imageObject);
     await updateDoc(doc(db, 'blocks', editingId), payload);
   } else {
@@ -527,8 +527,8 @@ async function saveClassroom() {
   const code = $('classroomCode').value.trim();
   const campusId = $('classroomCampusId').value;
   const blockId = $('classroomBlockId').value;
-  const campus = campuses.find(c => c.id === campusId);
-  const block = blocks.find(b => b.id === blockId);
+  const campus = getCampuses().find(c => c.id === campusId);
+  const block = getBlocks().find(b => b.id === blockId);
   if (!code || !campusId || !blockId) return showStatus($('modalStatus'), 'Sınıf kodu, kampüs ve blok zorunlu.', 'error');
 
   const saveBtn = $('saveEntityBtn');
@@ -571,7 +571,7 @@ async function saveClassroom() {
     };
 
     if (editingId) {
-      const old = classrooms.find(x => x.id === editingId);
+      const old = getClassrooms().find(x => x.id === editingId);
       const keptPaths = new Set(uploaded.map(x => x.path).filter(Boolean));
       for (const img of (old.imageObjects || [])) {
         if (img.path && !keptPaths.has(img.path)) await deleteImageIfPossible(img);
@@ -595,7 +595,7 @@ async function saveSettings() {
   clearStatus($('settingsStatus'));
   const title = $('settingTitle').value.trim();
   const subtitle = $('settingSubtitle').value.trim();
-  let logoObject = settings.logoObject || null;
+  let logoObject = getSettings().logoObject || null;
   const file = $('settingLogo').files?.[0];
   if (file) {
     if (logoObject?.path) await deleteImageIfPossible(logoObject);
@@ -608,7 +608,7 @@ async function saveSettings() {
 
 function fillClassroomTypeSelect(selectedValue = '') {
   const select = $('classroomType');
-  const options = classroomTypes.length ? classroomTypes.map(t => `<option value="${escapeHtml(t.name || '')}">${escapeHtml(t.name || '')}</option>`).join('') : '';
+  const options = getClassroomTypes().length ? getClassroomTypes().map(t => `<option value="${escapeHtml(t.name || '')}">${escapeHtml(t.name || '')}</option>`).join('') : '';
   select.innerHTML = `<option value="">Tür seçin</option>${options}`;
   if (selectedValue) select.value = selectedValue;
 }
@@ -616,8 +616,8 @@ function fillClassroomTypeSelect(selectedValue = '') {
 function renderTypeList() {
   const list = $('typeList');
   if (!list) return;
-  if (!classroomTypes.length) { list.innerHTML = '<div class="empty">Henüz derslik türü eklenmemiş.</div>'; return; }
-  list.innerHTML = classroomTypes.map(t => `
+  if (!getClassroomTypes().length) { list.innerHTML = '<div class="empty">Henüz derslik türü eklenmemiş.</div>'; return; }
+  list.innerHTML = getClassroomTypes().map(t => `
     <article class="item" style="min-height:auto">
       <div class="item-left">
         <div class="item-body" style="padding:16px 0">
@@ -632,9 +632,9 @@ function renderTypeList() {
   list.querySelectorAll('[data-type-id]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.dataset.typeId;
-      const item = classroomTypes.find(x => x.id === id);
+      const item = getClassroomTypes().find(x => x.id === id);
       if (!item) return;
-      const used = classrooms.some(c => (c.type || '') === (item.name || ''));
+      const used = getClassrooms().some(c => (c.type || '') === (item.name || ''));
       if (used) { showStatus($('typeStatus'), 'Bu tür kullanıldığı için silinemez.', 'error'); return; }
       if (!confirm('Derslik türü silinsin mi?')) return;
       await deleteDoc(doc(db, 'classroomTypes', id));
@@ -648,8 +648,8 @@ function fillFloorFilterCampuses() {
   const sel = $('floorFilterCampus');
   if (!sel) return;
   const current = sel.value;
-  sel.innerHTML = '<option value="">Tüm Kampüsler</option>' + campuses.map(c => `<option value="${c.id}">${escapeHtml(c.name || '')}</option>`).join('');
-  sel.value = campuses.some(c => c.id === current) ? current : '';
+  sel.innerHTML = '<option value="">Tüm Kampüsler</option>' + getCampuses().map(c => `<option value="${c.id}">${escapeHtml(c.name || '')}</option>`).join('');
+  sel.value = getCampuses().some(c => c.id === current) ? current : '';
   fillFloorFilterBlocks();
 }
 
@@ -657,7 +657,7 @@ function fillFloorFilterBlocks() {
   const campusId = $('floorFilterCampus').value;
   const sel = $('floorFilterBlock');
   const current = sel.value;
-  const filtered = blocks.filter(b => !campusId || b.campusId === campusId);
+  const filtered = getBlocks().filter(b => !campusId || b.campusId === campusId);
   sel.innerHTML = '<option value="">Tüm Bloklar</option>' + filtered.map(b => `<option value="${b.id}">${escapeHtml(b.name || '')}</option>`).join('');
   sel.value = filtered.some(b => b.id === current) ? current : '';
 }
@@ -667,7 +667,7 @@ function renderFloorList() {
   if (!list) return;
   const campusId = $('floorFilterCampus').value;
   const blockId = $('floorFilterBlock').value;
-  const filtered = blockFloors
+  const filtered = getBlockFloors()
     .filter(f => !campusId || f.campusId === campusId)
     .filter(f => !blockId || f.blockId === blockId)
     .sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999) || (a.name || '').localeCompare(b.name || '', 'tr'));
@@ -693,17 +693,17 @@ async function saveFloor() {
   const campusId = $('floorCampusId').value;
   const blockId = $('floorBlockId').value;
   const name = $('floorName').value.trim();
-  const campus = campuses.find(c => c.id === campusId);
-  const block = blocks.find(b => b.id === blockId);
+  const campus = getCampuses().find(c => c.id === campusId);
+  const block = getBlocks().find(b => b.id === blockId);
   if (!campusId || !blockId || !name) return showStatus($('modalStatus'), 'Kampüs, blok ve kat adı zorunlu.', 'error');
-  const duplicate = blockFloors.find(f => f.blockId === blockId && (f.name || '').toLowerCase() === name.toLowerCase() && f.id !== editingId);
+  const duplicate = getBlockFloors().find(f => f.blockId === blockId && (f.name || '').toLowerCase() === name.toLowerCase() && f.id !== editingId);
   if (duplicate) return showStatus($('modalStatus'), 'Bu blok için aynı kat adı zaten tanımlı.', 'error');
   const payload = { campusId, campusName: campus?.name || '', blockId, blockName: block?.name || '', name, sortOrder: $('floorSortOrder').value !== '' ? Number($('floorSortOrder').value) : null, updatedAt: serverTimestamp() };
   if (editingId) {
-    const previous = blockFloors.find(f => f.id === editingId);
+    const previous = getBlockFloors().find(f => f.id === editingId);
     await updateDoc(doc(db, 'blockFloors', editingId), payload);
     if (previous && previous.blockId === blockId && previous.name !== name) {
-      const affected = classrooms.filter(c => c.blockId === blockId && getClassroomFloorValue(c) === previous.name);
+      const affected = getClassrooms().filter(c => c.blockId === blockId && getClassroomFloorValue(c) === previous.name);
       for (const room of affected) {
         await updateDoc(doc(db, 'classrooms', room.id), { floor: name, 'features.floor': name, updatedAt: serverTimestamp() });
       }
@@ -715,9 +715,9 @@ async function saveFloor() {
 }
 
 function fillSettings() {
-  $('settingTitle').value = settings.title || 'Bahçeşehir Üniversitesi Derslikleri';
-  $('settingSubtitle').value = settings.subtitle || 'Derslik Görselleri';
-  $('settingLogoPreview').innerHTML = settings.logoUrl ? `<div class="img-box"><img src="${settings.logoUrl}" alt=""></div>` : '';
+  $('settingTitle').value = getSettings().title || 'Bahçeşehir Üniversitesi Derslikleri';
+  $('settingSubtitle').value = getSettings().subtitle || 'Derslik Görselleri';
+  $('settingLogoPreview').innerHTML = getSettings().logoUrl ? `<div class="img-box"><img src="${getSettings().logoUrl}" alt=""></div>` : '';
 }
 
 // ── Event listener'lar ─────────────────────────────────────────────────────
@@ -730,7 +730,7 @@ $('activateAllBtn').addEventListener('click', async () => {
   const oldText = btn.textContent;
   btn.disabled = true; btn.textContent = 'İşleniyor...';
   try {
-    const inactiveClassrooms = classrooms.filter(c => c.active !== true);
+    const inactiveClassrooms = getClassrooms().filter(c => c.active !== true);
     if (!inactiveClassrooms.length) { alert('Zaten tüm sınıflar aktif durumda.'); return; }
     const chunkSize = 500;
     for (let i = 0; i < inactiveClassrooms.length; i += chunkSize) {
@@ -745,7 +745,7 @@ $('activateAllBtn').addEventListener('click', async () => {
 });
 
 $('bulkThumbBtn').addEventListener('click', async () => {
-  const pending = classrooms.filter(c => !c.thumbnailUrl && Array.isArray(c.images) && c.images.length > 0);
+  const pending = getClassrooms().filter(c => !c.thumbnailUrl && Array.isArray(c.images) && c.images.length > 0);
   if (!pending.length) { alert("Tüm derslikler zaten thumbnail'e sahip veya görseli yok."); return; }
   if (!confirm(`Thumbnail'i olmayan ${pending.length} derslik için thumbnail oluşturulsun mu? Bu işlem biraz sürebilir.`)) return;
 
@@ -767,7 +767,7 @@ $('bulkThumbBtn').addEventListener('click', async () => {
       const thumbPath = `classrooms/${classroom.code || classroom.id}/thumb_${Date.now()}.jpg`;
       const thumbObj = await uploadFile(thumbPath, thumbBlob);
       await updateDoc(doc(db, 'classrooms', classroom.id), { thumbnailUrl: thumbObj.url, thumbnailPath: thumbObj.path });
-      const local = classrooms.find(c => c.id === classroom.id);
+      const local = getClassrooms().find(c => c.id === classroom.id);
       if (local) { local.thumbnailUrl = thumbObj.url; local.thumbnailPath = thumbObj.path; }
       succeeded++;
       addLog(`✓ ${classroom.code || classroom.id}`, 'var(--success)');
@@ -791,7 +791,7 @@ $('addTypeBtn').addEventListener('click', async () => {
   clearStatus($('typeStatus'));
   const name = $('newTypeName').value.trim();
   if (!name) return showStatus($('typeStatus'), 'Tür adı girin.', 'error');
-  const exists = classroomTypes.some(t => (t.name || '').toLowerCase() === name.toLowerCase());
+  const exists = getClassroomTypes().some(t => (t.name || '').toLowerCase() === name.toLowerCase());
   if (exists) return showStatus($('typeStatus'), 'Bu tür zaten mevcut.', 'error');
   const btn = $('addTypeBtn'), oldText = btn.textContent;
   btn.disabled = true; btn.textContent = 'Ekleniyor...';

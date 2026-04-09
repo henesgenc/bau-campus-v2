@@ -35,6 +35,15 @@ const stateMap = {
   currentThumbnailIndex:v => { currentThumbnailIndex = v; },
 };
 
+// Getter fonksiyonlar — her zaman güncel değeri döner
+// (import { classrooms } binding'i setState sonrası güncellenmediği için bunu kullan)
+export function getClassrooms()  { return classrooms; }
+export function getBlocks()      { return blocks; }
+export function getCampuses()    { return campuses; }
+export function getBlockFloors() { return blockFloors; }
+export function getSettings()    { return settings; }
+export function getClassroomTypes() { return classroomTypes; }
+
 export function showStatus(el, text, type = 'success') {
   el.textContent = text;
   el.className = `status show ${type}`;
