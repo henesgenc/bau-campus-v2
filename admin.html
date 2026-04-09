@@ -348,7 +348,6 @@
       box-shadow:none; 
       color:#5a4a2f;
       pointer-events:auto;
-      z-index:5;
     }
     .map-room.door:hover, .map-room.doubleDoor:hover { opacity:0.85; }
     .map-room.door.selected, .map-room.doubleDoor.selected { 
@@ -810,21 +809,12 @@
               </div>
               <button id="mapApplyDim" class="btn btn-secondary" style="width:100%;margin-top:8px">Boyutu Uygula</button>
               
-              <!-- Rotation Control (non-door elements) -->
+              <!-- Rotation Control -->
               <div id="mapRotationSection" style="display:none">
                 <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:10px 0 6px 0;display:block">— Döndürme —</label>
                 <div class="rotation-controls">
                   <button id="mapRotateLeft" class="rotation-btn" title="90° sola">↻</button>
                   <button id="mapRotateRight" class="rotation-btn" title="90° sağa">↺</button>
-                </div>
-              </div>
-              
-              <!-- Door Open Direction (only for doors) -->
-              <div id="mapDoorDirectionSection" style="display:none">
-                <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:10px 0 6px 0;display:block">— Açılış Yönü —</label>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-                  <button id="mapDoorInward" class="rotation-btn" style="font-size:12px;font-weight:700" title="İçeri açılır">⬅ İçeri</button>
-                  <button id="mapDoorOutward" class="rotation-btn" style="font-size:12px;font-weight:700" title="Dışarı açılır">Dışarı ➡</button>
                 </div>
               </div>
               
@@ -2459,39 +2449,36 @@
       const blockId = $('mapBlockFilter').value;
       const floor = $('mapFloorSelect').value;
       
+      // Calculate door position and size based on edge
+      let doorX, doorY, doorW, doorH, rotation;
+      const doorThickness = 6;
       const isDouble = doorType === 'doubleDoor';
       const doorLength = isDouble ? 80 : 40;
-      // arcSize: how far the arc extends away from the wall
-      const arcSize = isDouble ? doorLength / 2 : doorLength;
-      
-      // Door element is sized to contain: wall line + arc area
-      // Wall line is always at the near edge (touching parent), arc extends outward
-      let doorX, doorY, doorW, doorH;
       
       if (edge === 'top') {
-        // Arc extends upward (away from parent)
         doorX = parent.x + parent.w / 2 - doorLength / 2;
-        doorY = parent.y - arcSize;       // arc area above
+        doorY = parent.y - doorThickness / 2;
         doorW = doorLength;
-        doorH = arcSize;                  // element height = arc reach
+        doorH = doorThickness * 5; // enough height to show the arc
+        rotation = 0;
+      } else if (edge === 'right') {
+        doorX = parent.x + parent.w - doorThickness / 2;
+        doorY = parent.y + parent.h / 2 - doorLength / 2;
+        doorW = doorThickness * 5; // enough width to show the arc
+        doorH = doorLength;
+        rotation = 0;
       } else if (edge === 'bottom') {
-        // Arc extends downward
         doorX = parent.x + parent.w / 2 - doorLength / 2;
-        doorY = parent.y + parent.h;      // starts right at bottom edge
+        doorY = parent.y + parent.h - doorThickness / 2;
         doorW = doorLength;
-        doorH = arcSize;
-      } else if (edge === 'left') {
-        // Arc extends leftward
-        doorX = parent.x - arcSize;
+        doorH = doorThickness * 5; // enough height to show the arc
+        rotation = 0;
+      } else { // left
+        doorX = parent.x - doorThickness * 5;
         doorY = parent.y + parent.h / 2 - doorLength / 2;
-        doorW = arcSize;
+        doorW = doorThickness * 5; // enough width to show the arc
         doorH = doorLength;
-      } else { // right
-        // Arc extends rightward
-        doorX = parent.x + parent.w;
-        doorY = parent.y + parent.h / 2 - doorLength / 2;
-        doorW = arcSize;
-        doorH = doorLength;
+        rotation = 0;
       }
       
       mapData[tempId] = {
@@ -2502,8 +2489,7 @@
         w: doorW,
         h: doorH,
         shapes: [],
-        rotation: 0,
-        openDirection: 'outward', // default: arc goes away from parent
+        rotation,
         label: isDouble ? 'ÇİFT KAPI' : 'KAPI',
         campusId,
         blockId,
@@ -2767,10 +2753,11 @@
         
         // Special rendering for doors
         if (type === 'door' || type === 'doubleDoor') {
+          // Simple SVG rendering: just the door line and subtle arc
           const isDouble = type === 'doubleDoor';
-          const edge = d.attachedEdge || 'bottom';
-          const openDir = d.openDirection || 'outward';
+          const rotation = d.rotation || 0;
           
+          // Create SVG element
           const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
           svg.setAttribute('width', d.w);
           svg.setAttribute('height', d.h);
@@ -2781,107 +2768,99 @@
           svg.style.overflow = 'visible';
           svg.style.pointerEvents = 'none';
           
-          // Helper to create SVG element with attrs
-          const mkEl = (tag, attrs) => {
-            const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
-            Object.entries(attrs).forEach(([k,v]) => el.setAttribute(k, v));
-            return el;
-          };
+          // Determine orientation based on dimensions
+          const isHorizontal = d.w > d.h;
           
-          // Wall line position: always on the edge touching the parent
-          // Arc direction: outward = away from parent, inward = into parent
-          // openDir 'outward': arc is inside the door element bounds (element is already on the outside)
-          // openDir 'inward': arc flips to the opposite side (overlaps parent)
-          
-          if (edge === 'top' || edge === 'bottom') {
-            // Horizontal door: wall line runs across full width
-            // For 'top' edge: element is above parent, wall line at BOTTOM of element (y = d.h)
-            // For 'bottom' edge: element is below parent, wall line at TOP of element (y = 0)
-            const wallY = edge === 'top' ? d.h : 0;
+          if (isHorizontal) {
+            // Horizontal door (top/bottom edge)
+            // Door line (in wall)
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', '0');
+            line.setAttribute('y1', '0');
+            line.setAttribute('x2', d.w);
+            line.setAttribute('y2', '0');
+            line.setAttribute('stroke', '#8b6f47');
+            line.setAttribute('stroke-width', '4');
+            line.setAttribute('stroke-linecap', 'round');
+            svg.appendChild(line);
             
-            svg.appendChild(mkEl('line', {
-              x1: 0, y1: wallY, x2: d.w, y2: wallY,
-              stroke: '#8b6f47', 'stroke-width': 4, 'stroke-linecap': 'round'
-            }));
-            
-            // Arc: outward = away from parent wall
-            // top edge + outward = arc goes up (y decreases from wallY)
-            // top edge + inward = arc goes down (y increases from wallY, into parent)
-            // bottom edge + outward = arc goes down
-            // bottom edge + inward = arc goes up
-            const arcOutward = (edge === 'top') ? -1 : 1; // -1 = up, +1 = down
-            const arcDir = openDir === 'outward' ? arcOutward : -arcOutward;
+            // Open arc (90 degree swing) - always opens in the same direction, CSS rotation handles the rest
+            const arcRadius = isDouble ? d.w * 0.225 : d.w * 0.45;
+            const startX = isDouble ? d.w / 2 : 0;
             
             if (isDouble) {
-              const r = d.w / 2;
-              const ay = wallY + arcDir * r;
-              // Left leaf: from (0,wallY) swings to (d.w/2, wallY)
-              const sweep1 = arcDir > 0 ? 1 : 0;
-              svg.appendChild(mkEl('path', {
-                d: `M 0 ${wallY} L 0 ${ay} A ${r} ${r} 0 0 ${sweep1} ${d.w/2} ${wallY}`,
-                stroke: '#a67c52', 'stroke-width': 1.5, fill: 'none',
-                'stroke-dasharray': '4,3', opacity: 0.75
-              }));
-              // Right leaf: from (d.w,wallY) swings to (d.w/2, wallY)
-              const sweep2 = arcDir > 0 ? 0 : 1;
-              svg.appendChild(mkEl('path', {
-                d: `M ${d.w} ${wallY} L ${d.w} ${ay} A ${r} ${r} 0 0 ${sweep2} ${d.w/2} ${wallY}`,
-                stroke: '#a67c52', 'stroke-width': 1.5, fill: 'none',
-                'stroke-dasharray': '4,3', opacity: 0.75
-              }));
+              // Left leaf
+              const arc1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              arc1.setAttribute('d', `M 0 0 L 0 ${arcRadius} A ${arcRadius} ${arcRadius} 0 0 0 ${d.w/2} 0`);
+              arc1.setAttribute('stroke', '#a67c52');
+              arc1.setAttribute('stroke-width', '1.5');
+              arc1.setAttribute('fill', 'none');
+              arc1.setAttribute('stroke-dasharray', '3,2');
+              arc1.setAttribute('opacity', '0.65');
+              svg.appendChild(arc1);
+              // Right leaf
+              const arc2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              arc2.setAttribute('d', `M ${d.w} 0 L ${d.w} ${arcRadius} A ${arcRadius} ${arcRadius} 0 0 1 ${d.w/2} 0`);
+              arc2.setAttribute('stroke', '#a67c52');
+              arc2.setAttribute('stroke-width', '1.5');
+              arc2.setAttribute('fill', 'none');
+              arc2.setAttribute('stroke-dasharray', '3,2');
+              arc2.setAttribute('opacity', '0.65');
+              svg.appendChild(arc2);
             } else {
-              const r = d.w;
-              const ay = wallY + arcDir * r;
-              const sweep = arcDir > 0 ? 1 : 0;
-              svg.appendChild(mkEl('path', {
-                d: `M 0 ${wallY} L 0 ${ay} A ${r} ${r} 0 0 ${sweep} ${d.w} ${wallY}`,
-                stroke: '#a67c52', 'stroke-width': 1.5, fill: 'none',
-                'stroke-dasharray': '4,3', opacity: 0.75
-              }));
+              const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              arc.setAttribute('d', `M 0 0 L 0 ${arcRadius} A ${arcRadius} ${arcRadius} 0 0 0 ${arcRadius} 0`);
+              arc.setAttribute('stroke', '#a67c52');
+              arc.setAttribute('stroke-width', '1.5');
+              arc.setAttribute('fill', 'none');
+              arc.setAttribute('stroke-dasharray', '3,2');
+              arc.setAttribute('opacity', '0.65');
+              svg.appendChild(arc);
             }
-            
           } else {
-            // Vertical door (left/right edge): wall line runs full height
-            // 'left' edge: element is to the left of parent, wall line at RIGHT (x = d.w)
-            // 'right' edge: element is to the right of parent, wall line at LEFT (x = 0)
-            const wallX = edge === 'left' ? d.w : 0;
+            // Vertical door (left/right edge)
+            // Door line (in wall)
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', '0');
+            line.setAttribute('y1', '0');
+            line.setAttribute('x2', '0');
+            line.setAttribute('y2', d.h);
+            line.setAttribute('stroke', '#8b6f47');
+            line.setAttribute('stroke-width', '4');
+            line.setAttribute('stroke-linecap', 'round');
+            svg.appendChild(line);
             
-            svg.appendChild(mkEl('line', {
-              x1: wallX, y1: 0, x2: wallX, y2: d.h,
-              stroke: '#8b6f47', 'stroke-width': 4, 'stroke-linecap': 'round'
-            }));
-            
-            // left edge + outward = arc goes left (x decreases)
-            // left edge + inward = arc goes right (into parent)
-            // right edge + outward = arc goes right
-            // right edge + inward = arc goes left
-            const arcOutward = (edge === 'left') ? -1 : 1; // -1 = left, +1 = right
-            const arcDir = openDir === 'outward' ? arcOutward : -arcOutward;
+            // Open arc (90 degree swing)
+            const arcRadius = isDouble ? d.h * 0.225 : d.h * 0.45;
             
             if (isDouble) {
-              const r = d.h / 2;
-              const ax = wallX + arcDir * r;
-              const sweep1 = arcDir > 0 ? 0 : 1;
-              svg.appendChild(mkEl('path', {
-                d: `M ${wallX} 0 L ${ax} 0 A ${r} ${r} 0 0 ${sweep1} ${wallX} ${d.h/2}`,
-                stroke: '#a67c52', 'stroke-width': 1.5, fill: 'none',
-                'stroke-dasharray': '4,3', opacity: 0.75
-              }));
-              const sweep2 = arcDir > 0 ? 1 : 0;
-              svg.appendChild(mkEl('path', {
-                d: `M ${wallX} ${d.h} L ${ax} ${d.h} A ${r} ${r} 0 0 ${sweep2} ${wallX} ${d.h/2}`,
-                stroke: '#a67c52', 'stroke-width': 1.5, fill: 'none',
-                'stroke-dasharray': '4,3', opacity: 0.75
-              }));
+              // Top leaf
+              const arc1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              arc1.setAttribute('d', `M 0 0 L ${arcRadius} 0 A ${arcRadius} ${arcRadius} 0 0 0 0 ${d.h/2}`);
+              arc1.setAttribute('stroke', '#a67c52');
+              arc1.setAttribute('stroke-width', '1.5');
+              arc1.setAttribute('fill', 'none');
+              arc1.setAttribute('stroke-dasharray', '3,2');
+              arc1.setAttribute('opacity', '0.65');
+              svg.appendChild(arc1);
+              // Bottom leaf
+              const arc2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              arc2.setAttribute('d', `M 0 ${d.h} L ${arcRadius} ${d.h} A ${arcRadius} ${arcRadius} 0 0 1 0 ${d.h/2}`);
+              arc2.setAttribute('stroke', '#a67c52');
+              arc2.setAttribute('stroke-width', '1.5');
+              arc2.setAttribute('fill', 'none');
+              arc2.setAttribute('stroke-dasharray', '3,2');
+              arc2.setAttribute('opacity', '0.65');
+              svg.appendChild(arc2);
             } else {
-              const r = d.h;
-              const ax = wallX + arcDir * r;
-              const sweep = arcDir > 0 ? 0 : 1;
-              svg.appendChild(mkEl('path', {
-                d: `M ${wallX} 0 L ${ax} 0 A ${r} ${r} 0 0 ${sweep} ${wallX} ${d.h}`,
-                stroke: '#a67c52', 'stroke-width': 1.5, fill: 'none',
-                'stroke-dasharray': '4,3', opacity: 0.75
-              }));
+              const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              arc.setAttribute('d', `M 0 0 L ${arcRadius} 0 A ${arcRadius} ${arcRadius} 0 0 0 0 ${arcRadius}`);
+              arc.setAttribute('stroke', '#a67c52');
+              arc.setAttribute('stroke-width', '1.5');
+              arc.setAttribute('fill', 'none');
+              arc.setAttribute('stroke-dasharray', '3,2');
+              arc.setAttribute('opacity', '0.65');
+              svg.appendChild(arc);
             }
           }
           
@@ -2968,20 +2947,9 @@
       $('mapRoomW').parentElement.parentElement.style.display = showDimensions ? 'grid' : 'none';
       $('mapApplyDim').style.display = showDimensions ? 'block' : 'none';
       
-      // Show/hide rotation controls - only for non-door rotatable types
-      const showRotation = ['corridor'].includes(d.type);
+      // Show/hide rotation controls for door and other rotatable types
+      const showRotation = ['door', 'doubleDoor', 'corridor'].includes(d.type);
       $('mapRotationSection').style.display = showRotation ? 'block' : 'none';
-      
-      // Show/hide door direction section - only for doors
-      const showDoorDir = d.type === 'door' || d.type === 'doubleDoor';
-      $('mapDoorDirectionSection').style.display = showDoorDir ? 'block' : 'none';
-      if (showDoorDir) {
-        const isOutward = (d.openDirection || 'outward') === 'outward';
-        $('mapDoorInward').style.background = isOutward ? '' : 'var(--primary)';
-        $('mapDoorInward').style.color = isOutward ? '' : '#fff';
-        $('mapDoorOutward').style.background = isOutward ? 'var(--primary)' : '';
-        $('mapDoorOutward').style.color = isOutward ? '#fff' : '';
-      }
       
       // Hide shape editor for doors
       const showShapeEditor = d.type !== 'door' && d.type !== 'doubleDoor';
@@ -3065,21 +3033,6 @@
       if (!mapSelectedId || !mapData[mapSelectedId]) return;
       const d = mapData[mapSelectedId];
       d.rotation = ((d.rotation || 0) - 90 + 360) % 360;
-      renderMapPanel();
-      selectRoom(mapSelectedId);
-    });
-
-    // Door open direction controls
-    $('mapDoorInward').addEventListener('click', () => {
-      if (!mapSelectedId || !mapData[mapSelectedId]) return;
-      mapData[mapSelectedId].openDirection = 'inward';
-      renderMapPanel();
-      selectRoom(mapSelectedId);
-    });
-
-    $('mapDoorOutward').addEventListener('click', () => {
-      if (!mapSelectedId || !mapData[mapSelectedId]) return;
-      mapData[mapSelectedId].openDirection = 'outward';
       renderMapPanel();
       selectRoom(mapSelectedId);
     });
@@ -3273,24 +3226,11 @@
       
       Object.values(mapData).forEach(door => {
         if (door.attachedTo === parentId && ['door', 'doubleDoor'].includes(door.type)) {
-          const edge = door.attachedEdge;
-          const arcSize = door.type === 'doubleDoor' ? door.h : door.h; // already correct from placement
+          // Move door by the same delta as the parent (preserve relative offset on edge)
+          door.x += dx;
+          door.y += dy;
           
-          // Move along wall (slide) + keep pinned to edge (perpendicular)
-          if (edge === 'top') {
-            door.x += dx;
-            door.y = parent.y - door.h; // always pinned above parent
-          } else if (edge === 'bottom') {
-            door.x += dx;
-            door.y = parent.y + parent.h; // always pinned below parent
-          } else if (edge === 'left') {
-            door.x = parent.x - door.w; // always pinned left of parent
-            door.y += dy;
-          } else { // right
-            door.x = parent.x + parent.w; // always pinned right of parent
-            door.y += dy;
-          }
-          
+          // Update DOM element position
           const doorEl = mapCanvas.querySelector(`[data-id="${door.id}"]`);
           if (doorEl) {
             doorEl.style.left = door.x + 'px';
@@ -3310,21 +3250,16 @@
       
       const edge = door.attachedEdge;
       
-      // Keep door pinned to correct edge (perpendicular axis fixed)
-      if (edge === 'top') {
-        door.y = parent.y - door.h;
+      // Constrain based on edge - door slides along the wall, not off it
+      if (edge === 'top' || edge === 'bottom') {
+        // Horizontal door - constrain X position along parent width
         door.x = Math.max(parent.x, Math.min(parent.x + parent.w - door.w, door.x));
-      } else if (edge === 'bottom') {
-        door.y = parent.y + parent.h;
-        door.x = Math.max(parent.x, Math.min(parent.x + parent.w - door.w, door.x));
-      } else if (edge === 'left') {
-        door.x = parent.x - door.w;
-        door.y = Math.max(parent.y, Math.min(parent.y + parent.h - door.h, door.y));
-      } else { // right
-        door.x = parent.x + parent.w;
+      } else if (edge === 'left' || edge === 'right') {
+        // Vertical door - constrain Y position along parent height
         door.y = Math.max(parent.y, Math.min(parent.y + parent.h - door.h, door.y));
       }
       
+      // Update DOM
       const doorEl = mapCanvas.querySelector(`[data-id="${doorId}"]`);
       if (doorEl) {
         doorEl.style.left = door.x + 'px';
@@ -3421,7 +3356,6 @@
             label: pos.label || '',
             attachedTo: pos.attachedTo || '',
             attachedEdge: pos.attachedEdge || '',
-            openDirection: pos.openDirection || 'outward',
             capacity: 0,
             images: [],
             createdAt: serverTimestamp(),
@@ -3464,7 +3398,6 @@
             label: pos.label || '',
             attachedTo: pos.attachedTo || '',
             attachedEdge: pos.attachedEdge || '',
-            openDirection: pos.openDirection || 'outward',
             campusId: pos.campusId || '',
             blockId: pos.blockId || '',
             floor: pos.floor || '',
@@ -3511,8 +3444,7 @@
             rotation: c.rotation || 0,
             label: c.label || c.code || '',
             attachedTo: c.attachedTo || '',
-            attachedEdge: c.attachedEdge || '',
-            openDirection: c.openDirection || 'outward'
+            attachedEdge: c.attachedEdge || ''
           };
         }
       });
