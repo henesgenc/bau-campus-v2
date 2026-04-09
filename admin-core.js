@@ -114,7 +114,7 @@ function getManagedFloorsForBlock(blockId) {
     .sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999) || (a.name || '').localeCompare(b.name || '', 'tr'));
 }
 
-function getFloorOptionsForBlock(blockId, extraValues = []) {
+export function getFloorOptionsForBlock(blockId, extraValues = []) {
   const values = [];
   const seen = new Set();
   const push = v => {
