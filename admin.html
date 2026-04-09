@@ -2706,7 +2706,7 @@
         
         // Special rendering for doors
         if (type === 'door' || type === 'doubleDoor') {
-          // SVG rendering: cross line + open arc
+          // Simple SVG rendering: just the door line and subtle arc
           const isDouble = type === 'doubleDoor';
           const rotation = d.rotation || 0;
           
@@ -2738,16 +2738,67 @@
             svg.appendChild(line);
             
             // Open arc (90 degree swing)
-            const arcRadius = isDouble ? d.w / 2 : d.w / 2;
+            const arcRadius = d.w * 0.45;
             const centerX = d.w / 2;
             const centerY = d.h / 2;
-            const arcDirection = rotation === 180 ? -1 : 1; // Opens up or down
+            const arcDirection = rotation === 180 ? -1 : 1;
             
             const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            const arcY = centerY + (arcRadius * arcDirection);
-            arc.setAttribute('d', `M ${centerX} ${centerY} L ${centerX} ${arcY} A ${arcRadius} ${arcRadius} 0 0 1 ${centerX + arcRadius} ${centerY}`);
+            if (arcDirection === 1) {
+              // Opens downward/outward
+              const arcY = centerY + arcRadius;
+              arc.setAttribute('d', `M ${centerX} ${centerY} L ${centerX} ${arcY} A ${arcRadius} ${arcRadius} 0 0 1 ${centerX + arcRadius} ${centerY}`);
+            } else {
+              // Opens upward/inward
+              const arcY = centerY - arcRadius;
+              arc.setAttribute('d', `M ${centerX} ${centerY} L ${centerX} ${arcY} A ${arcRadius} ${arcRadius} 0 0 0 ${centerX + arcRadius} ${centerY}`);
+            }
             arc.setAttribute('stroke', '#a67c52');
-            arc.setAttribute('stroke-width', '2');
+            arc.setAttribute('stroke-width', '1.5');
+            arc.setAttribute('fill', 'none');
+            arc.setAttribute('stroke-dasharray', '3,2');
+            arc.setAttribute('opacity', '0.65');
+            svg.appendChild(arc);
+          } else {
+            // Vertical door (left/right edge)
+            // Door line (in wall)
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', d.w / 2);
+            line.setAttribute('y1', '0');
+            line.setAttribute('x2', d.w / 2);
+            line.setAttribute('y2', d.h);
+            line.setAttribute('stroke', '#8b6f47');
+            line.setAttribute('stroke-width', '4');
+            line.setAttribute('stroke-linecap', 'round');
+            svg.appendChild(line);
+            
+            // Open arc (90 degree swing)
+            const arcRadius = d.h * 0.45;
+            const centerX = d.w / 2;
+            const centerY = d.h / 2;
+            const arcDirection = rotation === 180 ? -1 : 1;
+            
+            const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            if (arcDirection === 1) {
+              // Opens rightward/outward
+              const arcX = centerX + arcRadius;
+              arc.setAttribute('d', `M ${centerX} ${centerY} L ${arcX} ${centerY} A ${arcRadius} ${arcRadius} 0 0 1 ${centerX} ${centerY - arcRadius}`);
+            } else {
+              // Opens leftward/inward
+              const arcX = centerX - arcRadius;
+              arc.setAttribute('d', `M ${centerX} ${centerY} L ${arcX} ${centerY} A ${arcRadius} ${arcRadius} 0 0 0 ${centerX} ${centerY - arcRadius}`);
+            }
+            arc.setAttribute('stroke', '#a67c52');
+            arc.setAttribute('stroke-width', '1.5');
+            arc.setAttribute('fill', 'none');
+            arc.setAttribute('stroke-dasharray', '3,2');
+            arc.setAttribute('opacity', '0.65');
+            svg.appendChild(arc);
+          }
+          
+          el.appendChild(svg);
+          // No resize handle for doors
+        } else {
             arc.setAttribute('fill', 'none');
             arc.setAttribute('stroke-dasharray', '4,3');
             arc.setAttribute('opacity', '0.7');
@@ -3112,20 +3163,41 @@
     
     // ── Update Attached Doors (Parent Tracking) ──
     function updateAttachedDoors(parentId, dx, dy) {
-      Object.values(mapData).forEach(element => {
-        if (element.attachedTo === parentId && ['door', 'doubleDoor'].includes(element.type)) {
-          element.x += dx;
-          element.y += dy;
+      const parent = mapData[parentId];
+      if (!parent) return;
+      
+      Object.values(mapData).forEach(door => {
+        if (door.attachedTo === parentId && ['door', 'doubleDoor'].includes(door.type)) {
+          // Recalculate door position based on parent's current position and edge
+          const edge = door.attachedEdge;
+          const doorThickness = 6;
+          const doorLength = door.type === 'doubleDoor' ? 80 : 40;
           
-          // Update DOM element position
-          const doorEl = mapCanvas.querySelector(`[data-id="${element.id}"]`);
-          if (doorEl) {
-            doorEl.style.left = element.x + 'px';
-            doorEl.style.top = element.y + 'px';
+          let newX, newY;
+          
+          if (edge === 'top') {
+            newX = parent.x + parent.w / 2 - doorLength / 2;
+            newY = parent.y - doorThickness / 2;
+          } else if (edge === 'right') {
+            newX = parent.x + parent.w - doorThickness / 2;
+            newY = parent.y + parent.h / 2 - doorLength / 2;
+          } else if (edge === 'bottom') {
+            newX = parent.x + parent.w / 2 - doorLength / 2;
+            newY = parent.y + parent.h - doorThickness / 2;
+          } else { // left
+            newX = parent.x - doorThickness / 2;
+            newY = parent.y + parent.h / 2 - doorLength / 2;
           }
           
-          // Constrain door to parent bounds
-          constrainDoorToParent(element.id);
+          door.x = newX;
+          door.y = newY;
+          
+          // Update DOM element position
+          const doorEl = mapCanvas.querySelector(`[data-id="${door.id}"]`);
+          if (doorEl) {
+            doorEl.style.left = door.x + 'px';
+            doorEl.style.top = door.y + 'px';
+          }
         }
       });
     }
