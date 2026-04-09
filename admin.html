@@ -2799,43 +2799,6 @@
           el.appendChild(svg);
           // No resize handle for doors
         } else {
-            arc.setAttribute('fill', 'none');
-            arc.setAttribute('stroke-dasharray', '4,3');
-            arc.setAttribute('opacity', '0.7');
-            svg.appendChild(arc);
-          } else {
-            // Vertical door (left/right edge)
-            // Door line (in wall)
-            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            line.setAttribute('x1', d.w / 2);
-            line.setAttribute('y1', '0');
-            line.setAttribute('x2', d.w / 2);
-            line.setAttribute('y2', d.h);
-            line.setAttribute('stroke', '#8b6f47');
-            line.setAttribute('stroke-width', '4');
-            line.setAttribute('stroke-linecap', 'round');
-            svg.appendChild(line);
-            
-            // Open arc (90 degree swing)
-            const arcRadius = isDouble ? d.h / 2 : d.h / 2;
-            const centerX = d.w / 2;
-            const centerY = d.h / 2;
-            const arcDirection = rotation === 180 ? -1 : 1; // Opens left or right
-            
-            const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            const arcX = centerX + (arcRadius * arcDirection);
-            arc.setAttribute('d', `M ${centerX} ${centerY} L ${arcX} ${centerY} A ${arcRadius} ${arcRadius} 0 0 1 ${centerX} ${centerY - arcRadius}`);
-            arc.setAttribute('stroke', '#a67c52');
-            arc.setAttribute('stroke-width', '2');
-            arc.setAttribute('fill', 'none');
-            arc.setAttribute('stroke-dasharray', '4,3');
-            arc.setAttribute('opacity', '0.7');
-            svg.appendChild(arc);
-          }
-          
-          el.appendChild(svg);
-          // No resize handle for doors
-        } else {
           // Content based on type
           let content = '';
           if (type === 'classroom' && c) {
@@ -2866,6 +2829,7 @@
       el.addEventListener('click', e => { if (!e._wasDragged) selectRoom(id); });
       mapCanvas.appendChild(el);
     }
+
 
     function selectRoom(id) {
       mapSelectedId = id;
