@@ -897,7 +897,7 @@
                 <div style="font-size:64px;margin-bottom:16px;opacity:0.3">🗺️</div>
                 <h3 style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:12px">Kat Planı Editörü</h3>
                 <p style="font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:20px">
-                  Başlamak için soldaki filtrelerden <strong style="color:var(--text)">Kampüs</strong> ve <strong style="color:var(--text)">Blok</strong> seçin.
+                  Başlamak için soldaki filtrelerden <strong style="color:var(--text)">Kampüs</strong>, <strong style="color:var(--text)">Blok</strong> ve <strong style="color:var(--text)">Kat</strong> seçin.
                 </p>
                 <div style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;background:var(--primary-soft);color:var(--primary);border-radius:10px;font-size:13px;font-weight:600">
                   ← Soldaki "Filtrele" bölümünden başlayın
@@ -2128,8 +2128,8 @@
     const ELEMENT_TYPES = {
       classroom: { icon: '🪑', label: 'Sınıf', defaultW: 80, defaultH: 56 },
       corridor: { icon: '🛤', label: 'Koridor', defaultW: 120, defaultH: 40 },
-      door: { icon: '🚪', label: 'Tek Kapı', defaultW: 6, defaultH: 40 },
-      doubleDoor: { icon: '🚪🚪', label: 'Çift Kapı', defaultW: 6, defaultH: 80 },
+      door: { icon: '🚪', label: 'Tek Kapı', defaultW: 30, defaultH: 40 },
+      doubleDoor: { icon: '🚪🚪', label: 'Çift Kapı', defaultW: 30, defaultH: 80 },
       toilet: { icon: '🚺', label: 'WC', defaultW: 50, defaultH: 50 },
       office: { icon: '💼', label: 'Ofis', defaultW: 70, defaultH: 60 },
       stairs: { icon: '🪧', label: 'Merdiven', defaultW: 60, defaultH: 80 },
@@ -2203,11 +2203,12 @@
       updateMapUIState();
     }
     
-    // Check if campus and block are selected, show/hide UI accordingly
+    // Check if campus, block AND floor are selected, show/hide UI accordingly
     function updateMapUIState() {
       const campusId = $('mapCampusFilter').value;
       const blockId = $('mapBlockFilter').value;
-      const isReady = campusId && blockId;
+      const floor = $('mapFloorSelect').value;
+      const isReady = campusId && blockId && floor;
       
       // Show/hide placeholder and main area
       if ($('mapPlaceholder')) $('mapPlaceholder').style.display = isReady ? 'none' : 'flex';
@@ -2256,7 +2257,10 @@
       });
     });
 
-    $('mapFloorSelect').addEventListener('change', () => renderMapPanel());
+    $('mapFloorSelect').addEventListener('change', () => {
+      updateMapUIState();
+      renderMapPanel();
+    });
 
     // ── Tool Palette ──
     document.querySelectorAll('.tool-btn').forEach(btn => {
@@ -2289,7 +2293,7 @@
       const blockId = $('mapBlockFilter').value;
       
       if (!campusId || !blockId) {
-        alert('⚠️ Lütfen önce Kampüs ve Blok seçin!');
+        alert('⚠️ Lütfen önce Kampüs, Blok ve Kat seçin!');
         return;
       }
       
@@ -2415,24 +2419,24 @@
         doorX = parent.x + parent.w / 2 - doorLength / 2;
         doorY = parent.y - doorThickness / 2;
         doorW = doorLength;
-        doorH = doorThickness;
+        doorH = doorThickness * 5; // enough height to show the arc
         rotation = 0;
       } else if (edge === 'right') {
         doorX = parent.x + parent.w - doorThickness / 2;
         doorY = parent.y + parent.h / 2 - doorLength / 2;
-        doorW = doorThickness;
+        doorW = doorThickness * 5; // enough width to show the arc
         doorH = doorLength;
         rotation = 0;
       } else if (edge === 'bottom') {
         doorX = parent.x + parent.w / 2 - doorLength / 2;
         doorY = parent.y + parent.h - doorThickness / 2;
         doorW = doorLength;
-        doorH = doorThickness;
+        doorH = doorThickness * 5; // enough height to show the arc
         rotation = 0;
       } else { // left
-        doorX = parent.x - doorThickness / 2;
+        doorX = parent.x - doorThickness * 5;
         doorY = parent.y + parent.h / 2 - doorLength / 2;
-        doorW = doorThickness;
+        doorW = doorThickness * 5; // enough width to show the arc
         doorH = doorLength;
         rotation = 0;
       }
@@ -2476,10 +2480,11 @@
     function renderMapPanel() {
       if (currentTab !== 'map') return;
       
-      // Don't render if campus and block are not selected
+      // Don't render if campus, block and floor are not selected
       const campusId = $('mapCampusFilter').value;
       const blockId = $('mapBlockFilter').value;
-      if (!campusId || !blockId) {
+      const floor = $('mapFloorSelect').value;
+      if (!campusId || !blockId || !floor) {
         // Clear canvas
         if (mapCanvas) mapCanvas.innerHTML = '';
         return;
@@ -2653,6 +2658,7 @@
       
       // Apply rotation
       const rotationTransform = d.rotation ? `rotate(${d.rotation}deg)` : '';
+      const rotationOrigin = 'center center';
       
       // Check if element has shapes (multi-rectangle)
       if (d.shapes && d.shapes.length > 0) {
@@ -2702,7 +2708,8 @@
         el.style.top = d.y + 'px';
         el.style.width = d.w + 'px';
         el.style.height = d.h + 'px';
-        if (rotationTransform) el.style.transform = rotationTransform;
+        el.style.transformOrigin = 'center center';
+        el.style.transform = d.rotation ? `rotate(${d.rotation}deg)` : '';
         
         // Special rendering for doors
         if (type === 'door' || type === 'doubleDoor') {
@@ -2729,43 +2736,54 @@
             // Door line (in wall)
             const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             line.setAttribute('x1', '0');
-            line.setAttribute('y1', d.h / 2);
+            line.setAttribute('y1', '0');
             line.setAttribute('x2', d.w);
-            line.setAttribute('y2', d.h / 2);
+            line.setAttribute('y2', '0');
             line.setAttribute('stroke', '#8b6f47');
             line.setAttribute('stroke-width', '4');
             line.setAttribute('stroke-linecap', 'round');
             svg.appendChild(line);
             
-            // Open arc (90 degree swing)
-            const arcRadius = d.w * 0.45;
-            const centerX = d.w / 2;
-            const centerY = d.h / 2;
-            const arcDirection = rotation === 180 ? -1 : 1;
+            // Open arc (90 degree swing) - always opens in the same direction, CSS rotation handles the rest
+            const arcRadius = isDouble ? d.w * 0.225 : d.w * 0.45;
+            const startX = isDouble ? d.w / 2 : 0;
             
-            const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            if (arcDirection === 1) {
-              // Opens downward/outward
-              const arcY = centerY + arcRadius;
-              arc.setAttribute('d', `M ${centerX} ${centerY} L ${centerX} ${arcY} A ${arcRadius} ${arcRadius} 0 0 1 ${centerX + arcRadius} ${centerY}`);
+            if (isDouble) {
+              // Left leaf
+              const arc1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              arc1.setAttribute('d', `M 0 0 L 0 ${arcRadius} A ${arcRadius} ${arcRadius} 0 0 0 ${d.w/2} 0`);
+              arc1.setAttribute('stroke', '#a67c52');
+              arc1.setAttribute('stroke-width', '1.5');
+              arc1.setAttribute('fill', 'none');
+              arc1.setAttribute('stroke-dasharray', '3,2');
+              arc1.setAttribute('opacity', '0.65');
+              svg.appendChild(arc1);
+              // Right leaf
+              const arc2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              arc2.setAttribute('d', `M ${d.w} 0 L ${d.w} ${arcRadius} A ${arcRadius} ${arcRadius} 0 0 1 ${d.w/2} 0`);
+              arc2.setAttribute('stroke', '#a67c52');
+              arc2.setAttribute('stroke-width', '1.5');
+              arc2.setAttribute('fill', 'none');
+              arc2.setAttribute('stroke-dasharray', '3,2');
+              arc2.setAttribute('opacity', '0.65');
+              svg.appendChild(arc2);
             } else {
-              // Opens upward/inward
-              const arcY = centerY - arcRadius;
-              arc.setAttribute('d', `M ${centerX} ${centerY} L ${centerX} ${arcY} A ${arcRadius} ${arcRadius} 0 0 0 ${centerX + arcRadius} ${centerY}`);
+              const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              arc.setAttribute('d', `M 0 0 L 0 ${arcRadius} A ${arcRadius} ${arcRadius} 0 0 0 ${arcRadius} 0`);
+              arc.setAttribute('stroke', '#a67c52');
+              arc.setAttribute('stroke-width', '1.5');
+              arc.setAttribute('fill', 'none');
+              arc.setAttribute('stroke-dasharray', '3,2');
+              arc.setAttribute('opacity', '0.65');
+              svg.appendChild(arc);
             }
-            arc.setAttribute('stroke', '#a67c52');
-            arc.setAttribute('stroke-width', '1.5');
-            arc.setAttribute('fill', 'none');
-            arc.setAttribute('stroke-dasharray', '3,2');
-            arc.setAttribute('opacity', '0.65');
-            svg.appendChild(arc);
           } else {
             // Vertical door (left/right edge)
             // Door line (in wall)
             const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            line.setAttribute('x1', d.w / 2);
+            line.setAttribute('x1', '0');
             line.setAttribute('y1', '0');
-            line.setAttribute('x2', d.w / 2);
+            line.setAttribute('x2', '0');
             line.setAttribute('y2', d.h);
             line.setAttribute('stroke', '#8b6f47');
             line.setAttribute('stroke-width', '4');
@@ -2773,27 +2791,37 @@
             svg.appendChild(line);
             
             // Open arc (90 degree swing)
-            const arcRadius = d.h * 0.45;
-            const centerX = d.w / 2;
-            const centerY = d.h / 2;
-            const arcDirection = rotation === 180 ? -1 : 1;
+            const arcRadius = isDouble ? d.h * 0.225 : d.h * 0.45;
             
-            const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            if (arcDirection === 1) {
-              // Opens rightward/outward
-              const arcX = centerX + arcRadius;
-              arc.setAttribute('d', `M ${centerX} ${centerY} L ${arcX} ${centerY} A ${arcRadius} ${arcRadius} 0 0 1 ${centerX} ${centerY - arcRadius}`);
+            if (isDouble) {
+              // Top leaf
+              const arc1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              arc1.setAttribute('d', `M 0 0 L ${arcRadius} 0 A ${arcRadius} ${arcRadius} 0 0 0 0 ${d.h/2}`);
+              arc1.setAttribute('stroke', '#a67c52');
+              arc1.setAttribute('stroke-width', '1.5');
+              arc1.setAttribute('fill', 'none');
+              arc1.setAttribute('stroke-dasharray', '3,2');
+              arc1.setAttribute('opacity', '0.65');
+              svg.appendChild(arc1);
+              // Bottom leaf
+              const arc2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              arc2.setAttribute('d', `M 0 ${d.h} L ${arcRadius} ${d.h} A ${arcRadius} ${arcRadius} 0 0 1 0 ${d.h/2}`);
+              arc2.setAttribute('stroke', '#a67c52');
+              arc2.setAttribute('stroke-width', '1.5');
+              arc2.setAttribute('fill', 'none');
+              arc2.setAttribute('stroke-dasharray', '3,2');
+              arc2.setAttribute('opacity', '0.65');
+              svg.appendChild(arc2);
             } else {
-              // Opens leftward/inward
-              const arcX = centerX - arcRadius;
-              arc.setAttribute('d', `M ${centerX} ${centerY} L ${arcX} ${centerY} A ${arcRadius} ${arcRadius} 0 0 0 ${centerX} ${centerY - arcRadius}`);
+              const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              arc.setAttribute('d', `M 0 0 L ${arcRadius} 0 A ${arcRadius} ${arcRadius} 0 0 0 0 ${arcRadius}`);
+              arc.setAttribute('stroke', '#a67c52');
+              arc.setAttribute('stroke-width', '1.5');
+              arc.setAttribute('fill', 'none');
+              arc.setAttribute('stroke-dasharray', '3,2');
+              arc.setAttribute('opacity', '0.65');
+              svg.appendChild(arc);
             }
-            arc.setAttribute('stroke', '#a67c52');
-            arc.setAttribute('stroke-width', '1.5');
-            arc.setAttribute('fill', 'none');
-            arc.setAttribute('stroke-dasharray', '3,2');
-            arc.setAttribute('opacity', '0.65');
-            svg.appendChild(arc);
           }
           
           el.appendChild(svg);
@@ -2956,9 +2984,7 @@
     $('mapRotateLeft').addEventListener('click', () => {
       if (!mapSelectedId || !mapData[mapSelectedId]) return;
       const d = mapData[mapSelectedId];
-      const isDoor = ['door', 'doubleDoor'].includes(d.type);
-      const step = isDoor ? 180 : 90; // Doors rotate 180°, others 90°
-      d.rotation = ((d.rotation || 0) + step) % 360;
+      d.rotation = ((d.rotation || 0) + 90) % 360;
       renderMapPanel();
       selectRoom(mapSelectedId);
     });
@@ -2966,9 +2992,7 @@
     $('mapRotateRight').addEventListener('click', () => {
       if (!mapSelectedId || !mapData[mapSelectedId]) return;
       const d = mapData[mapSelectedId];
-      const isDoor = ['door', 'doubleDoor'].includes(d.type);
-      const step = isDoor ? 180 : 90; // Doors rotate 180°, others 90°
-      d.rotation = ((d.rotation || 0) - step + 360) % 360;
+      d.rotation = ((d.rotation || 0) - 90 + 360) % 360;
       renderMapPanel();
       selectRoom(mapSelectedId);
     });
@@ -2986,7 +3010,19 @@
 
     $('mapRemoveBtn').addEventListener('click', () => {
       if (!mapSelectedId) return;
-      delete mapData[mapSelectedId];
+      const removingId = mapSelectedId;
+      const removingData = mapData[removingId];
+      
+      // If removing a parent element, also remove all attached doors
+      if (removingData && removingData.type !== 'door' && removingData.type !== 'doubleDoor') {
+        Object.keys(mapData).forEach(id => {
+          if (mapData[id].attachedTo === removingId) {
+            delete mapData[id];
+          }
+        });
+      }
+      
+      delete mapData[removingId];
       mapSelectedId = null;
       mapInfoCard.style.display='none';
       renderMapPanel();
@@ -3001,6 +3037,7 @@
         dragged=false;
         startX=e.clientX; startY=e.clientY;
         startL=mapData[id].x; startT=mapData[id].y;
+        let prevX = startL, prevY = startT;
         const onMove = ev => {
           const dx=(ev.clientX-startX)/mapScale;
           const dy=(ev.clientY-startY)/mapScale;
@@ -3015,18 +3052,33 @@
             newY = Math.round(newY / GRID_SIZE) * GRID_SIZE;
           }
           
-          // Snap to nearby elements
-          const snapped = snapToNearbyElements(id, newX, newY, mapData[id].w, mapData[id].h, ev.shiftKey);
-          newX = snapped.x;
-          newY = snapped.y;
+          // Snap to nearby elements (skip for doors)
+          const isDoor = mapData[id].type === 'door' || mapData[id].type === 'doubleDoor';
+          if (!isDoor) {
+            const snapped = snapToNearbyElements(id, newX, newY, mapData[id].w, mapData[id].h, ev.shiftKey);
+            newX = snapped.x;
+            newY = snapped.y;
+          }
+          
+          // Calculate actual delta after snapping for door tracking
+          const actualDx = newX - prevX;
+          const actualDy = newY - prevY;
           
           mapData[id].x = newX;
           mapData[id].y = newY;
           el.style.left = mapData[id].x+'px';
           el.style.top  = mapData[id].y+'px';
           
-          // Update attached doors (parent tracking)
-          updateAttachedDoors(id, dx, dy);
+          prevX = newX;
+          prevY = newY;
+          
+          // Update attached doors using actual snapped delta
+          updateAttachedDoors(id, actualDx, actualDy);
+          
+          // Constrain door to its parent if it's a door being dragged
+          if (isDoor && mapData[id].attachedTo) {
+            constrainDoorToParent(id);
+          }
           
           if (mapSelectedId===id) {
             const infoRow = $('mapSelectedInfo').querySelector('.info-row:last-child strong');
@@ -3057,6 +3109,8 @@
       
       Object.entries(mapData).forEach(([otherId, other]) => {
         if (otherId === currentId) return;
+        // Skip doors as snap targets - they're thin and cause unwanted snapping
+        if (other.type === 'door' || other.type === 'doubleDoor') return;
         
         const ox = other.x;
         const oy = other.y;
@@ -3132,29 +3186,9 @@
       
       Object.values(mapData).forEach(door => {
         if (door.attachedTo === parentId && ['door', 'doubleDoor'].includes(door.type)) {
-          // Recalculate door position based on parent's current position and edge
-          const edge = door.attachedEdge;
-          const doorThickness = 6;
-          const doorLength = door.type === 'doubleDoor' ? 80 : 40;
-          
-          let newX, newY;
-          
-          if (edge === 'top') {
-            newX = parent.x + parent.w / 2 - doorLength / 2;
-            newY = parent.y - doorThickness / 2;
-          } else if (edge === 'right') {
-            newX = parent.x + parent.w - doorThickness / 2;
-            newY = parent.y + parent.h / 2 - doorLength / 2;
-          } else if (edge === 'bottom') {
-            newX = parent.x + parent.w / 2 - doorLength / 2;
-            newY = parent.y + parent.h - doorThickness / 2;
-          } else { // left
-            newX = parent.x - doorThickness / 2;
-            newY = parent.y + parent.h / 2 - doorLength / 2;
-          }
-          
-          door.x = newX;
-          door.y = newY;
+          // Move door by the same delta as the parent (preserve relative offset on edge)
+          door.x += dx;
+          door.y += dy;
           
           // Update DOM element position
           const doorEl = mapCanvas.querySelector(`[data-id="${door.id}"]`);
@@ -3175,20 +3209,14 @@
       if (!parent) return;
       
       const edge = door.attachedEdge;
-      const parentBounds = {
-        left: parent.x,
-        right: parent.x + parent.w,
-        top: parent.y,
-        bottom: parent.y + parent.h
-      };
       
-      // Constrain based on edge
+      // Constrain based on edge - door slides along the wall, not off it
       if (edge === 'top' || edge === 'bottom') {
-        // Horizontal door - constrain X position
-        door.x = Math.max(parentBounds.left, Math.min(parentBounds.right - door.w, door.x));
+        // Horizontal door - constrain X position along parent width
+        door.x = Math.max(parent.x, Math.min(parent.x + parent.w - door.w, door.x));
       } else if (edge === 'left' || edge === 'right') {
-        // Vertical door - constrain Y position
-        door.y = Math.max(parentBounds.top, Math.min(parentBounds.bottom - door.h, door.y));
+        // Vertical door - constrain Y position along parent height
+        door.y = Math.max(parent.y, Math.min(parent.y + parent.h - door.h, door.y));
       }
       
       // Update DOM
@@ -3286,6 +3314,8 @@
             shapes: pos.shapes || [],
             rotation: pos.rotation || 0,
             label: pos.label || '',
+            attachedTo: pos.attachedTo || '',
+            attachedEdge: pos.attachedEdge || '',
             capacity: 0,
             images: [],
             createdAt: serverTimestamp(),
@@ -3303,6 +3333,13 @@
             isNew: false
           };
           
+          // Update any doors that were attached to this temp element
+          Object.values(mapData).forEach(door => {
+            if (door.attachedTo === tempId) {
+              door.attachedTo = newDocRef.id;
+            }
+          });
+          
           newCount++;
         }
         
@@ -3316,42 +3353,31 @@
             mapW: pos.w, 
             mapH: pos.h,
             elementType: pos.type || 'classroom',
+            rotation: pos.rotation || 0,
+            shapes: pos.shapes || [],
+            label: pos.label || '',
+            attachedTo: pos.attachedTo || '',
+            attachedEdge: pos.attachedEdge || '',
+            campusId: pos.campusId || '',
+            blockId: pos.blockId || '',
+            floor: pos.floor || '',
             mapUpdatedAt: serverTimestamp()
           };
-          
-          // Add optional fields
-          if (pos.shapes && pos.shapes.length > 0) {
-            payload.shapes = pos.shapes;
-          }
-          if (pos.rotation) {
-            payload.rotation = pos.rotation;
-          }
-          if (pos.label) {
-            payload.label = pos.label;
-          }
-          if (pos.campusId) {
-            payload.campusId = pos.campusId;
-          }
-          if (pos.blockId) {
-            payload.blockId = pos.blockId;
-          }
-          if (pos.floor) {
-            payload.floor = pos.floor;
-          }
           
           batch.update(doc(db, 'classrooms', id), payload);
           saveCount++;
         });
         
-        if (batch._mutations && batch._mutations.length > 0) {
+        try {
           await batch.commit();
+        } catch(batchErr) {
+          // batch.commit throws if empty in some SDK versions - safe to ignore if no updates
+          if (saveCount > 0) throw batchErr;
         }
         
         // Reload data to reflect changes
-        if (newCount > 0) {
-          await loadAll();
-          renderMapPanel();
-        }
+        await loadAll();
+        renderMapPanel();
         
         btn.textContent=`✓ Kaydedildi (${saveCount} güncellendi, ${newCount} yeni)`; 
         btn.style.background='var(--success)';
@@ -3376,7 +3402,9 @@
             h: c.mapH || 56,
             shapes: c.shapes || [],
             rotation: c.rotation || 0,
-            label: c.label || c.code || ''
+            label: c.label || c.code || '',
+            attachedTo: c.attachedTo || '',
+            attachedEdge: c.attachedEdge || ''
           };
         }
       });
