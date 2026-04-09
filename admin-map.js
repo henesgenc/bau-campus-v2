@@ -99,7 +99,10 @@ export function loadMapPositions() {
         label: c.label || c.code || '',
         attachedTo: c.attachedTo || '',
         attachedEdge: c.attachedEdge || '',
-        stairDirection: c.stairDirection || ''
+        stairDirection: c.stairDirection || '',
+        campusId: c.campusId || '',
+        blockId: c.blockId || '',
+        floor: c.floor || ''
       };
     }
   });
