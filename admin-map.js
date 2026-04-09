@@ -121,10 +121,19 @@ export function renderMapPanel() {
   const filtered  = getFilteredClassrooms();
   const placed    = filtered.filter(c => mapData[c.id]);
   const unplaced  = filtered.filter(c => !mapData[c.id]);
+  
+  // Seçilen kampüs ve blok nesnelerini bul
+  const selectedCampus = campusId ? getCampuses().find(c => c.id === campusId) : null;
+  const selectedBlock = blockId ? getBlocks().find(b => b.id === blockId) : null;
+  
   const placedElements = Object.values(mapData).filter(d => {
     if (!d.type || d.type === 'classroom') return placed.some(c => c.id === d.id);
-    if (campusId && d.campusId !== campusId) return false;
-    if (blockId  && d.blockId  !== blockId)  return false;
+    
+    // Diğer elementler için (kapı, koridor vb) - ID veya name karşılaştır
+    if (campusId && d.campusId && d.campusId !== campusId) return false;
+    if (blockId && d.blockId && d.blockId !== blockId) return false;
+    if (floor && d.floor && d.floor !== floor) return false;
+    
     return true;
   });
 
@@ -345,7 +354,17 @@ function placeClassroom(id) {
   if (!c) return;
   const type = c.elementType || 'classroom';
   const defaults = ELEMENT_TYPES[type] || ELEMENT_TYPES.classroom;
-  mapData[id] = { id, type, x: 40, y: 40, w: defaults.defaultW, h: defaults.defaultH, shapes: [], rotation: 0, label: c.code || '' };
+  
+  // Eğer classroom'da campusId, blockId veya floor yoksa, seçilen filtreden al
+  const campusId = c.campusId || $('mapCampusFilter').value || '';
+  const blockId = c.blockId || $('mapBlockFilter').value || '';
+  const floor = c.floor || $('mapFloorSelect').value || '';
+  
+  mapData[id] = { 
+    id, type, x: 40, y: 40, w: defaults.defaultW, h: defaults.defaultH, 
+    shapes: [], rotation: 0, label: c.code || '',
+    campusId, blockId, floor
+  };
   renderMapPanel();
   selectRoom(id);
 }
@@ -387,11 +406,30 @@ function snapDoorToStructure(x, y, w, h) {
 // ── Filtrelenmiş sınıflar ──────────────────────────────────────────────────
 function getFilteredClassrooms() {
   const cid = $('mapCampusFilter').value, bid = $('mapBlockFilter').value, floor = $('mapFloorSelect').value;
+  
+  // Seçilen kampüs ve blok nesnelerini bul
+  const selectedCampus = cid ? getCampuses().find(c => c.id === cid) : null;
+  const selectedBlock = bid ? getBlocks().find(b => b.id === bid) : null;
+  
   return getClassrooms().filter(c => {
-    if (cid && c.campusId !== cid) return false;
-    if (bid && c.blockId  !== bid) return false;
+    // Kampüs filtresi - ID veya name karşılaştır
+    if (cid) {
+      const matches = c.campusId === cid || 
+                     (selectedCampus && (c.campus === selectedCampus.name || c.campusName === selectedCampus.name));
+      if (!matches) return false;
+    }
+    
+    // Blok filtresi - ID veya name karşılaştır
+    if (bid) {
+      const matches = c.blockId === bid || 
+                     (selectedBlock && (c.building === selectedBlock.name || c.blockName === selectedBlock.name));
+      if (!matches) return false;
+    }
+    
+    // Kat filtresi
     const cf = getClassroomFloorValue(c);
     if (floor !== '' && cf !== floor) return false;
+    
     return true;
   });
 }
@@ -830,15 +868,27 @@ $('mapSaveAllBtn').addEventListener('click', async () => {
     // Mevcut elementleri güncelle
     Object.entries(mapData).forEach(([id, pos]) => {
       if (id.startsWith('temp_')) return;
-      batch.update(doc(db, 'classrooms', id), {
+      
+      // Eğer pos'ta campusId/blockId/floor yoksa, classroom nesnesinden al
+      const classroom = getClassrooms().find(c => c.id === id);
+      const updateData = {
         mapX: pos.x, mapY: pos.y, mapW: pos.w, mapH: pos.h,
         elementType: pos.type || 'classroom', rotation: pos.rotation || 0,
         shapes: pos.shapes || [], label: pos.label || '',
         attachedTo: pos.attachedTo || '', attachedEdge: pos.attachedEdge || '',
         stairDirection: pos.stairDirection || '',
-        campusId: pos.campusId || '', blockId: pos.blockId || '', floor: pos.floor || '',
+        campusId: pos.campusId || '',
+        blockId: pos.blockId || '',
+        floor: pos.floor || '',
         mapUpdatedAt: serverTimestamp()
-      });
+      };
+      
+      // Eğer classroom nesnesinde de bu bilgiler boşsa, mapData'dan güncelle
+      if (classroom && !classroom.campusId && pos.campusId) updateData.campusId = pos.campusId;
+      if (classroom && !classroom.blockId && pos.blockId) updateData.blockId = pos.blockId;
+      if (classroom && !classroom.floor && pos.floor) updateData.floor = pos.floor;
+      
+      batch.update(doc(db, 'classrooms', id), updateData);
       saveCount++;
     });
 
