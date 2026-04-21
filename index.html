@@ -49,7 +49,7 @@
     }
     .search-inner{
       display:grid;
-      grid-template-columns:1fr 1fr 2fr auto auto;
+      grid-template-columns:1fr 1fr 1fr 2fr auto auto;
       gap:10px;
       align-items:center;
     }
@@ -282,7 +282,7 @@
     #scrollTopBtn:hover{background:#1749b8}
 
     @media (max-width:900px){
-      .search-inner{grid-template-columns:1fr 1fr}
+      .search-inner{grid-template-columns:1fr 1fr 1fr}
       .results-count{display:none}
     }
     @media (max-width:600px){
@@ -319,6 +319,10 @@
         <div class="cd-wrap">
           <button id="buildingBtn" class="cd-btn">Tüm Binalar</button>
           <div id="buildingPanel" class="cd-panel"></div>
+        </div>
+        <div class="cd-wrap">
+          <button id="floorBtn" class="cd-btn">Tüm Katlar</button>
+          <div id="floorPanel" class="cd-panel"></div>
         </div>
         <div class="control">
           <span class="control-icon">⌕</span>
@@ -382,6 +386,8 @@
     const campusPanel   = document.getElementById('campusPanel');
     const buildingBtn   = document.getElementById('buildingBtn');
     const buildingPanel = document.getElementById('buildingPanel');
+    const floorBtn      = document.getElementById('floorBtn');
+    const floorPanel    = document.getElementById('floorPanel');
     const searchInput   = document.getElementById('searchInput');
     const cardGrid = document.getElementById('cardGrid');
     const resultCount = document.getElementById('resultCount');
@@ -399,11 +405,13 @@
     const scrollTopBtn = document.getElementById('scrollTopBtn');
 
     let classrooms = [];
+    let blockFloors = [];
     let activeItem = null;
     let activeImageUrl = '';
     let currentSort     = 'name-asc';
     let selectedCampus   = 'all';
     let selectedBuilding = 'all';
+    let selectedFloor    = 'all';
     const brandedImageBlobCache = new Map();
 
     /* ── dropdown yardımcısı ── */
@@ -458,8 +466,10 @@
       (value, label) => {
         selectedCampus   = value;
         selectedBuilding = 'all';
+        selectedFloor    = 'all';
         campusBtn.textContent   = label;
         buildingBtn.textContent = 'Tüm Binalar';
+        floorBtn.textContent    = 'Tüm Katlar';
         renderCards();
       }
     );
@@ -480,7 +490,46 @@
       },
       (value, label) => {
         selectedBuilding = value;
+        selectedFloor = 'all';
         buildingBtn.textContent = label;
+        floorBtn.textContent = 'Tüm Katlar';
+        renderCards();
+      }
+    );
+
+    /* Kat dropdown */
+    buildDropdown(
+      floorBtn, floorPanel,
+      () => {
+        // Filtrelenmiş sınıflardan mevcut katları al
+        const filteredClassrooms = classrooms.filter(c => {
+          const okCampus   = selectedCampus   === 'all' || c.campusName === selectedCampus;
+          const okBuilding = selectedBuilding === 'all' || c.blockName  === selectedBuilding;
+          return okCampus && okBuilding;
+        });
+        const floorNames = [...new Set(filteredClassrooms.map(c => c.floor).filter(Boolean))];
+        
+        // blockFloors'dan sortOrder bilgisini al ve sırala
+        const floorMap = new Map();
+        blockFloors.forEach(bf => {
+          floorMap.set(bf.name, bf.sortOrder ?? 9999);
+        });
+        
+        floorNames.sort((a, b) => {
+          const orderA = floorMap.get(a) ?? 9999;
+          const orderB = floorMap.get(b) ?? 9999;
+          if (orderA !== orderB) return orderA - orderB;
+          return String(a).localeCompare(String(b), 'tr');
+        });
+        
+        return [
+          { value: 'all', label: 'Tüm Katlar', selected: selectedFloor === 'all' },
+          ...floorNames.map(n => ({ value: n, label: n, selected: selectedFloor === n }))
+        ];
+      },
+      (value, label) => {
+        selectedFloor = value;
+        floorBtn.textContent = label;
         renderCards();
       }
     );
@@ -511,9 +560,17 @@
       });
     });
 
-    function floorNumber(text) {
-      const match = String(text || '').match(/\d+/);
-      return match ? Number(match[0]) : 0;
+    function getFloorSortOrder(floorName) {
+      if (!floorName) return 99999;
+      const floorData = blockFloors.find(bf => bf.name === floorName);
+      if (floorData && floorData.sortOrder != null) {
+        return floorData.sortOrder;
+      }
+      // Eğer blockFloors'da yoksa, metin bazlı sıralama
+      const normalized = String(floorName).toLowerCase().replace(/\s/g, '');
+      if (normalized.includes('zemin') || normalized.includes('giriş')) return 0;
+      const match = normalized.match(/(\d+)/);
+      return match ? Number(match[1]) : 99999;
     }
 
     async function loadSettings() {
@@ -537,15 +594,16 @@
       let items = classrooms.filter(item => {
         const okCampus   = selectedCampus   === 'all' || item.campusName === selectedCampus;
         const okBuilding = selectedBuilding === 'all' || item.blockName  === selectedBuilding;
+        const okFloor    = selectedFloor    === 'all' || item.floor      === selectedFloor;
         const okSearch   = !q || String(item.code || '').toLowerCase().includes(q);
-        return okCampus && okBuilding && okSearch;
+        return okCampus && okBuilding && okFloor && okSearch;
       });
       items.sort((a, b) => {
         switch (currentSort) {
           case 'name-desc':     return String(b.code||'').localeCompare(String(a.code||''),'tr');
           case 'capacity-desc': return Number(b.capacity||0) - Number(a.capacity||0);
           case 'capacity-asc':  return Number(a.capacity||0) - Number(b.capacity||0);
-          case 'floor-asc':     return floorNumber(a.floor)  - floorNumber(b.floor);
+          case 'floor-asc':     return getFloorSortOrder(a.floor) - getFloorSortOrder(b.floor);
           default:              return String(a.code||'').localeCompare(String(b.code||''),'tr');
         }
       });
@@ -621,16 +679,18 @@
     async function loadClassrooms() {
       loadingState.style.display = 'block';
       try {
-        const q = query(
-          collection(db, 'classrooms'),
-          orderBy('code')
-        );
+        const [classroomSnap, floorSnap] = await Promise.all([
+          getDocs(query(collection(db, 'classrooms'), orderBy('code'))),
+          getDocs(query(collection(db, 'blockFloors'), orderBy('sortOrder')))
+        ]);
 
-        const snap = await getDocs(q);
         // active alanı olmayan (undefined) veya true olanları göster
-        classrooms = snap.docs
+        classrooms = classroomSnap.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
           .filter(c => c.active !== false);
+        
+        blockFloors = floorSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
         fillCampusOptions();
         fillBuildingOptions();
         renderCards();
