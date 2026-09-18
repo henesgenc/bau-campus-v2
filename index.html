@@ -175,6 +175,13 @@
       width:100%;height:200px;object-fit:cover;display:block;
       background:#edf0f5;
     }
+    .card-image.no-photo{
+      width:100%;height:200px;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:8px;
+      background:linear-gradient(180deg,#eef1f6,#e5e9f0);color:#9aa4b6;
+    }
+    .card-image.no-photo svg{width:32px;height:32px;opacity:.7}
+    .card-image.no-photo span{font-size:12.5px;font-weight:600;letter-spacing:.01em}
     .card-badge{
       position:absolute;top:12px;left:12px;
       background:rgba(15,25,35,.55);
@@ -211,6 +218,14 @@
       position:relative;width:100%;background:#0d1829
     }
     .main-image{width:100%;height:auto;max-height:80vh;object-fit:contain;display:block;background:#0d1829}
+    .main-image-placeholder{
+      width:100%;height:420px;max-height:80vh;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:12px;
+      background:linear-gradient(180deg,#101d38,#0d1829);color:rgba(255,255,255,.5);
+    }
+    .main-image-placeholder svg{width:52px;height:52px;opacity:.55}
+    .main-image-placeholder span{font-size:14px;font-weight:600}
+    .action-btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
     .thumbs{
       position:absolute;left:20px;top:20px;z-index:4;
       display:flex;gap:7px;flex-wrap:wrap;max-width:calc(100% - 80px)
@@ -361,6 +376,10 @@
       <div id="thumbGrid" class="thumbs"></div>
       <div class="modal-stage">
         <img id="mainImage" class="main-image" src="" alt="Sınıf görseli" crossorigin="anonymous" />
+        <div id="mainImagePlaceholder" class="main-image-placeholder" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3l18 18M10.5 6H19a2 2 0 0 1 2 2v9.5M5 6h1M3 8v10a2 2 0 0 0 2 2h12.5M9 12a3 3 0 0 0 4.24 2.73M14.9 10.14A3 3 0 0 0 9.86 9.1"/></svg>
+          <span>Bu sınıf için henüz fotoğraf eklenmedi</span>
+        </div>
         <div class="modal-overlay">
           <div class="modal-info">
             <div id="modalTitle" class="modal-title"></div>
@@ -399,6 +418,7 @@
     const modalTitle = document.getElementById('modalTitle');
     const modalMeta = document.getElementById('modalMeta');
     const mainImage = document.getElementById('mainImage');
+    const mainImagePlaceholder = document.getElementById('mainImagePlaceholder');
     const thumbGrid = document.getElementById('thumbGrid');
     const downloadImage = document.getElementById('downloadImage');
     const copyImage = document.getElementById('copyImage');
@@ -612,7 +632,17 @@
 
     function setActiveImage(url) {
       activeImageUrl = url || '';
-      mainImage.src = activeImageUrl;
+      if (activeImageUrl) {
+        mainImage.src = activeImageUrl;
+        mainImage.style.display = '';
+        mainImagePlaceholder.style.display = 'none';
+      } else {
+        mainImage.removeAttribute('src');
+        mainImage.style.display = 'none';
+        mainImagePlaceholder.style.display = 'flex';
+      }
+      downloadImage.disabled = !activeImageUrl;
+      if (copyImage) copyImage.disabled = !activeImageUrl;
     }
 
     function openModal(item) {
@@ -655,11 +685,17 @@
       items.forEach(item => {
         const firstImage = Array.isArray(item.images) && item.images.length ? item.images[0] : '';
         const cardImage  = item.thumbnailUrl || firstImage;
+        const cardImageHtml = cardImage
+          ? `<img class="card-image" src="${cardImage}" alt="${item.code || 'Derslik'} görseli" crossorigin="anonymous" />`
+          : `<div class="card-image no-photo">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3l18 18M10.5 6H19a2 2 0 0 1 2 2v9.5M5 6h1M3 8v10a2 2 0 0 0 2 2h12.5M9 12a3 3 0 0 0 4.24 2.73M14.9 10.14A3 3 0 0 0 9.86 9.1"/></svg>
+               <span>Fotoğraf yok</span>
+             </div>`;
         const card = document.createElement('article');
         card.className = 'card';
         card.innerHTML = `
           <div class="card-img-wrap">
-            <img class="card-image" src="${cardImage}" alt="${item.code || 'Derslik'} görseli" crossorigin="anonymous" />
+            ${cardImageHtml}
             <span class="card-badge">${item.code || '-'}</span>
           </div>
           <div class="card-body">
